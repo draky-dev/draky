@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+
+CWD="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+ROOT="${CWD}/.."
+
+PYTHONPATH="$PYTHONPATH:$ROOT" python3 "$ROOT/dk" "$@" < /dev/stdin

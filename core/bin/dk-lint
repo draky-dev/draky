@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+
+CWD="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+ROOT="${CWD}/.."
+
+EXIT_CODE=0
+
+cd "${ROOT}"
+
+# We want to do the cleanup even if pylint will return non-zero error code.
+pylint --rcfile="${ROOT}/pylintrc" "${ROOT}/dk" || EXIT_CODE=$?
+
+exit $EXIT_CODE

@@ -1,0 +1,118 @@
+#!/usr/bin/env sh
+
+CWD="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+
+CONTAINER_NAME=draky
+IMAGE_NAME=draky.dev/draky
+DRAKY_VERSION=$TEMPLATE_DRAKY_VERSION
+PROJECT_CONFIG_DIR=.draky
+CORE_GLOBAL_CONFIG_PATH=/global-config
+
+DOCKER_HOST_UID="${UID}"
+DOCKER_HOST_GID="$(id -g)"
+DOCKER_GID="$(stat -c '%g' /var/run/docker.sock)"
+
+COLOR_RESET='\033[0m'
+COLOR_BLUE='\033[0;94m'
+COLOR_GREEN='\033[0;92m'
+COLOR_WHITE='\033[0;97m'
+COLOR_RED='\033[0;91m'
+
+if [ "$(echo $(uname -s) | cut -c 1-5)" == "Linux" ]; then
+  export DOCKER_HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
+else
+  export DOCKER_HOST_IP=host.docker.internal
+fi
+
+find_project_config_path() {
+  if [ "$PWD" = / ]; then
+    false
+  elif [[ "$PWD" =~ ^/home/[a-z0-9_\$-]+$ ]]; then
+    # Don't let search for project configuration in the home directory as we have global configuration there.
+    false
+  elif [ -d "$1" ]; then
+    printf '%s\n' "${PWD%/}/$1"
+  else
+    (cd .. && find_project_config_path "$1")
+  fi
+}
+
+PROJECT_CONFIG_PATH="$(find_project_config_path "$PROJECT_CONFIG_DIR")"
+PROJECT_ROOT="$PROJECT_CONFIG_PATH/.."
+
+HOST_GLOBAL_CONFIG_PATH="$HOME/.draky"
+
+# Make sure that HOST_GLOBAL_CONFIG_PATH exists.
+if [ ! -d "$HOST_GLOBAL_CONFIG_PATH" ]; then
+  mkdir "$HOST_GLOBAL_CONFIG_PATH"
+fi
+
+init_environment() {
+  if [ -z "$PROJECT_CONFIG_PATH" ]; then
+    destroy_core
+    mkdir "$PROJECT_CONFIG_DIR"
+    PROJECT_CONFIG_PATH="$PWD/$PROJECT_CONFIG_DIR"
+    PROJECT_ROOT="$PROJECT_CONFIG_PATH/.."
+    execute_core "$@"
+    else
+    echo -e "$COLOR_RED\"$PROJECT_CONFIG_DIR\" directory already exists in the project and is not empty. Delete it if you want to initialize the environment again.$COLOR_RESET"
+  fi
+}
+
+start_core() {
+  if ! docker container inspect ${CONTAINER_NAME} &> /dev/null; then
+    docker create \
+    --name "$CONTAINER_NAME" \
+    --group-add="$DOCKER_GID"	\
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "$PROJECT_CONFIG_PATH:$PROJECT_CONFIG_PATH" \
+    -v "$HOST_GLOBAL_CONFIG_PATH:$CORE_GLOBAL_CONFIG_PATH" \
+    -v "$PROJECT_ROOT/core:/opt/dk-core" \
+    -e "DRAKY_PROJECT_CONFIG_ROOT=$PROJECT_CONFIG_PATH" \
+    -e "DRAKY_GLOBAL_CONFIG_ROOT=$CORE_GLOBAL_CONFIG_PATH" \
+    -e "DRAKY_PROJECT_ROOT=$PROJECT_ROOT" \
+    -e "DOCKER_HOST_UID=$DOCKER_HOST_UID" \
+    -e "DOCKER_HOST_GID=$DOCKER_HOST_GID" \
+    -e "DOCKER_HOST_IP=$DOCKER_HOST_IP" \
+    ${IMAGE_NAME}:${DRAKY_VERSION} > /dev/null
+  fi
+
+  if ! docker top "${CONTAINER_NAME}" &> /dev/null; then
+    docker start ${CONTAINER_NAME} > /dev/null
+  fi
+}
+
+destroy_core() {
+  if docker container inspect ${CONTAINER_NAME} &> /dev/null; then
+    docker rm -f -v "$CONTAINER_NAME" > /dev/null
+  fi
+}
+
+execute_core() {
+  start_core
+  docker exec \
+  -ti \
+  --user="$DOCKER_HOST_UID:$DOCKER_HOST_GID" \
+  -e "DRAKY_PROJECT_CONFIG_CURRENT_ROOT=$PROJECT_CONFIG_PATH" \
+  "${CONTAINER_NAME}" dk-core "$@" < /dev/stdin
+
+  if [ "$?" = "100" ]; then
+    destroy_core
+    execute_core "$@"
+  fi
+}
+
+if [ "$1" == "core" ] && [ "$2" == "start" ]; then
+  start_core
+fi
+
+if [ "$1" == "core" ] && [ "$2" == "destroy" ]; then
+  destroy_core
+fi
+
+if [ "$1" == "env" ] && [ "$2" == "init" ]; then
+  init_environment "$@"
+  exit 0
+fi
+
+execute_core "$@"
