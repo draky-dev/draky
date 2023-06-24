@@ -4,7 +4,6 @@ ifndef VERSION
 	override VERSION = test
 endif
 
-
 DIST_PATH = ./dist
 DIST_BIN_PATH = ${DIST_PATH}/bin
 
@@ -16,7 +15,7 @@ build:
 	TEMPLATE_DRAKY_VERSION=${VERSION} ./bin/template-renderer.sh -t ./bin/templates/draky.template -o ${DIST_BIN_PATH}/draky
 	find ${DIST_BIN_PATH} -type f -exec chmod 755 {} \;
 
-build-test:   build test
+build-test:         build test
 build-test-cleanup: build-test cleanup
 
 test:
@@ -25,6 +24,3 @@ test:
 
 cleanup:
 	docker rmi "${NAME}:${VERSION}"
-
-version-test:
-	echo "${VERSION}"
