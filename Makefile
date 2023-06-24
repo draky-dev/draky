@@ -16,7 +16,7 @@ build:
 	TEMPLATE_DRAKY_VERSION=${VERSION} ./bin/template-renderer.sh -t ./bin/templates/draky.template -o ${DIST_BIN_PATH}/draky
 	find ${DIST_BIN_PATH} -type f -exec chmod 755 {} \;
 
-build-test:   build test cleanup
+build-test:   build test
 build-test-cleanup: build-test cleanup
 
 test:
