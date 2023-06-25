@@ -1,4 +1,4 @@
-NAME = draky
+NAME = draky.dev/draky
 # Let's handle situation where VERSION is passed as empty. That'll allow us to simplify the pipeline.
 ifndef VERSION
 	override VERSION = local-build
