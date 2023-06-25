@@ -61,20 +61,26 @@ init_environment() {
 
 start_core() {
   if ! docker container inspect ${CONTAINER_NAME} &> /dev/null; then
-    docker create \
-    --name "$CONTAINER_NAME" \
-    --group-add="$DOCKER_GID"	\
-    -v /var/run/docker.sock:/var/run/docker.sock \
-    -v "$PROJECT_CONFIG_PATH:$PROJECT_CONFIG_PATH" \
-    -v "$HOST_GLOBAL_CONFIG_PATH:$CORE_GLOBAL_CONFIG_PATH" \
-    -v "$PROJECT_ROOT/core:/opt/dk-core" \
-    -e "DRAKY_PROJECT_CONFIG_ROOT=$PROJECT_CONFIG_PATH" \
-    -e "DRAKY_GLOBAL_CONFIG_ROOT=$CORE_GLOBAL_CONFIG_PATH" \
-    -e "DRAKY_PROJECT_ROOT=$PROJECT_ROOT" \
-    -e "DOCKER_HOST_UID=$DOCKER_HOST_UID" \
-    -e "DOCKER_HOST_GID=$DOCKER_HOST_GID" \
-    -e "DOCKER_HOST_IP=$DOCKER_HOST_IP" \
-    ${IMAGE_NAME}:${DRAKY_VERSION} > /dev/null
+
+    ARGS=(
+      --name "$CONTAINER_NAME"
+      --group-add="$DOCKER_GID"
+      -v /var/run/docker.sock:/var/run/docker.sock
+      -v "$PROJECT_CONFIG_PATH:$PROJECT_CONFIG_PATH"
+      -v "$HOST_GLOBAL_CONFIG_PATH:$CORE_GLOBAL_CONFIG_PATH"
+      -e "DRAKY_PROJECT_CONFIG_ROOT=$PROJECT_CONFIG_PATH"
+      -e "DRAKY_GLOBAL_CONFIG_ROOT=$CORE_GLOBAL_CONFIG_PATH"
+      -e "DRAKY_PROJECT_ROOT=$PROJECT_ROOT"
+      -e "DOCKER_HOST_UID=$DOCKER_HOST_UID"
+      -e "DOCKER_HOST_GID=$DOCKER_HOST_GID"
+      -e "DOCKER_HOST_IP=$DOCKER_HOST_IP"
+    )
+
+    if [[ -v DRAKY_DEVELOPMENT ]]; then
+        ARGS+=(-v "$PROJECT_ROOT/core:/opt/dk-core")
+    fi
+
+    docker create "${ARGS[@]}" ${IMAGE_NAME}:${DRAKY_VERSION} > /dev/null
   fi
 
   if ! docker top "${CONTAINER_NAME}" &> /dev/null; then
