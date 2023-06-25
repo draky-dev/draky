@@ -1,7 +1,7 @@
 NAME = draky
 # Let's handle situation where VERSION is passed as empty. That'll allow us to simplify the pipeline.
 ifndef VERSION
-	override VERSION = test
+	override VERSION = local-build
 endif
 
 DIST_PATH = ./dist

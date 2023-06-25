@@ -76,6 +76,7 @@ class ConfigManager:
 # container won't complain that docker-compose.yml file doesn't exist.
 PATH_PROJECT_CONFIG = os.environ['DRAKY_PROJECT_CONFIG_ROOT']
 PATH_GLOBAL_CONFIG = os.environ['DRAKY_GLOBAL_CONFIG_ROOT']
+DRAKY_VERSION = os.environ['DRAKY_VERSION']
 PATH_COMMANDS = PATH_PROJECT_CONFIG + '/commands'
 PATH_ENVIRONMENTS = PATH_PROJECT_CONFIG + '/env'
 PATH_TEMPLATE_DEFAULT = '/opt/dk-core/resources/empty-template'

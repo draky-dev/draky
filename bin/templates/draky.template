@@ -68,6 +68,7 @@ start_core() {
       -v /var/run/docker.sock:/var/run/docker.sock
       -v "$PROJECT_CONFIG_PATH:$PROJECT_CONFIG_PATH"
       -v "$HOST_GLOBAL_CONFIG_PATH:$CORE_GLOBAL_CONFIG_PATH"
+      -e "DRAKY_VERSION=$DRAKY_VERSION"
       -e "DRAKY_PROJECT_CONFIG_ROOT=$PROJECT_CONFIG_PATH"
       -e "DRAKY_GLOBAL_CONFIG_ROOT=$CORE_GLOBAL_CONFIG_PATH"
       -e "DRAKY_PROJECT_ROOT=$PROJECT_ROOT"
@@ -76,7 +77,7 @@ start_core() {
       -e "DOCKER_HOST_IP=$DOCKER_HOST_IP"
     )
 
-    if [[ -v DRAKY_DEVELOPMENT ]]; then
+    if [[ $DRAKY_DEVELOPMENT -eq 1 ]]; then
         ARGS+=(-v "$PROJECT_ROOT/core:/opt/dk-core")
     fi
 

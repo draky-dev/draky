@@ -20,8 +20,6 @@ class NoAction(argparse.Action):
 class ChoicesAction(argparse._StoreAction):  # pylint: disable=protected-access
     """Class providing action that allows for multiple choices.
     """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
 
     def add_choice(self,
                    choice,
@@ -39,3 +37,8 @@ class ChoicesAction(argparse._StoreAction):  # pylint: disable=protected-access
         self.choices.append(choice)
         if hasattr(self, 'container'):
             self.container.add_argument(choice, help=help, action='none')
+
+
+class VersionAction(argparse._VersionAction):  # pylint: disable=protected-access,too-few-public-methods
+    """Class providing action for displaying the current version.
+    """
