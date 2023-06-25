@@ -12,7 +12,7 @@ build:
 	docker buildx build -f ./Dockerfile --rm -t ${NAME}:${VERSION} .
 	mkdir -p ${DIST_BIN_PATH}
 	docker save -o ${DIST_PATH}/image.tar ${NAME}:${VERSION}
-	TEMPLATE_DRAKY_VERSION=${VERSION} ./bin/template-renderer.sh -t ./bin/templates/draky.template -o ${DIST_BIN_PATH}/draky
+	TEMPLATE_DRAKY_VERSION=${VERSION} TEMPLATE_DRAKY_NAME=${NAME} ./bin/template-renderer.sh -t ./bin/templates/draky.template -o ${DIST_BIN_PATH}/draky
 	find ${DIST_BIN_PATH} -type f -exec chmod 755 {} \;
 
 build-test:         build test

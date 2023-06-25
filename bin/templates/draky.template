@@ -3,7 +3,7 @@
 CWD="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 
 CONTAINER_NAME=draky
-IMAGE_NAME=draky.dev/draky
+IMAGE_NAME=$TEMPLATE_DRAKY_NAME
 DRAKY_VERSION=$TEMPLATE_DRAKY_VERSION
 PROJECT_CONFIG_DIR=.draky
 CORE_GLOBAL_CONFIG_PATH=/global-config
