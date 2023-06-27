@@ -62,8 +62,8 @@ start_core() {
       -e "DOCKER_HOST_IP=$DOCKER_HOST_IP"
     )
 
-    if [[ $DRAKY_DEVELOPMENT -eq 1 ]]; then
-        ARGS+=(-v "$PROJECT_ROOT/core:/opt/dk-core")
+    if [[ $DRAKY_MOUNT_CORE ]]; then
+        ARGS+=(-v "$DRAKY_MOUNT_CORE:/opt/dk-core")
     fi
 
     docker create "${ARGS[@]}" ${IMAGE_NAME}:${DRAKY_VERSION} > /dev/null
