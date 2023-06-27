@@ -86,10 +86,16 @@ destroy_core() {
 
 execute_core() {
   start_core
+
+  # This is required otherwise COLUMNS will be empty here, as this value is not inherited.
+  COLUMNS=$(tput cols)
+  export COLUMNS
+
   docker exec \
   -it \
   --user="$DOCKER_HOST_UID:$DOCKER_HOST_GID" \
   -e "DRAKY_PROJECT_CONFIG_CURRENT_ROOT=$PROJECT_CONFIG_PATH" \
+  -e "COLUMNS=$COLUMNS" \
   "${CONTAINER_NAME}" dk-core "$@" < /dev/stdin
 
   if [ "$?" = "100" ]; then
