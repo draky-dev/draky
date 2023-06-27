@@ -37,33 +37,12 @@ find_project_config_path() {
   fi
 }
 
-PROJECT_CONFIG_PATH="$(find_project_config_path "$PROJECT_CONFIG_DIR")"
-
-if [ -z $PROJECT_CONFIG_PATH ]; then
-  echo -e "${COLOR_RED}Project configuration could not be found${COLOR_RESET}"
-  exit 1
-fi
-
-PROJECT_ROOT="$PROJECT_CONFIG_PATH/.."
-
 HOST_GLOBAL_CONFIG_PATH="$HOME/.draky"
 
 # Make sure that HOST_GLOBAL_CONFIG_PATH exists.
 if [ ! -d "$HOST_GLOBAL_CONFIG_PATH" ]; then
   mkdir "$HOST_GLOBAL_CONFIG_PATH"
 fi
-
-init_environment() {
-  if [ -z "$PROJECT_CONFIG_PATH" ]; then
-    destroy_core
-    mkdir "$PROJECT_CONFIG_DIR"
-    PROJECT_CONFIG_PATH="$PWD/$PROJECT_CONFIG_DIR"
-    PROJECT_ROOT="$PROJECT_CONFIG_PATH/.."
-    execute_core "$@"
-    else
-    echo -e "$COLOR_RED\"$PROJECT_CONFIG_DIR\" directory already exists in the project and is not empty. Delete it if you want to initialize the environment again.$COLOR_RESET"
-  fi
-}
 
 start_core() {
   if ! docker container inspect ${CONTAINER_NAME} &> /dev/null; then
@@ -83,7 +62,7 @@ start_core() {
       -e "DOCKER_HOST_IP=$DOCKER_HOST_IP"
     )
 
-    if [ $DRAKY_DEVELOPMENT -eq 1 ]; then
+    if [[ $DRAKY_DEVELOPMENT -eq 1 ]]; then
         ARGS+=(-v "$PROJECT_ROOT/core:/opt/dk-core")
     fi
 
@@ -98,13 +77,16 @@ start_core() {
 destroy_core() {
   if docker container inspect ${CONTAINER_NAME} &> /dev/null; then
     docker rm -f -v "$CONTAINER_NAME" > /dev/null
+    echo "draky core has been destroyed."
+  else
+    echo "draky core is already destroyed."
   fi
 }
 
 execute_core() {
   start_core
   docker exec \
-  -ti \
+  -it \
   --user="$DOCKER_HOST_UID:$DOCKER_HOST_GID" \
   -e "DRAKY_PROJECT_CONFIG_CURRENT_ROOT=$PROJECT_CONFIG_PATH" \
   "${CONTAINER_NAME}" dk-core "$@" < /dev/stdin
@@ -115,16 +97,39 @@ execute_core() {
   fi
 }
 
+init_environment() {
+  if [ -z "$PROJECT_CONFIG_PATH" ]; then
+    destroy_core
+    mkdir "$PROJECT_CONFIG_DIR"
+    PROJECT_CONFIG_PATH="$PWD/$PROJECT_CONFIG_DIR"
+    PROJECT_ROOT="$PROJECT_CONFIG_PATH/.."
+    execute_core "$@"
+    else
+    echo -e "$COLOR_RED\"$PROJECT_CONFIG_DIR\" directory already exists in the project and is not empty. Delete it if you want to initialize the environment again.$COLOR_RESET"
+  fi
+}
+
+PROJECT_CONFIG_PATH="$(find_project_config_path "$PROJECT_CONFIG_DIR")"
+
+if [ "$1" == "env" ] && [ "$2" == "init" ]; then
+  init_environment "$@"
+  exit 0
+fi
+
+if [ -z $PROJECT_CONFIG_PATH ]; then
+  echo -e "${COLOR_RED}Project configuration could not be found${COLOR_RESET}"
+  exit 1
+fi
+
+PROJECT_ROOT="$PROJECT_CONFIG_PATH/.."
+
 if [ "$1" == "core" ] && [ "$2" == "start" ]; then
   start_core
+  exit 0
 fi
 
 if [ "$1" == "core" ] && [ "$2" == "destroy" ]; then
   destroy_core
-fi
-
-if [ "$1" == "env" ] && [ "$2" == "init" ]; then
-  init_environment "$@"
   exit 0
 fi
 

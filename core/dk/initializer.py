@@ -66,7 +66,8 @@ def initialize():
         chosen_template_name = input(f"{Fore.LIGHTBLUE_EX}Enter template name: {Style.RESET_ALL}")
         chosen_template = available_templates_map[chosen_template_name]
 
-    shutil.copytree(chosen_template.path, PATH_PROJECT_CONFIG, dirs_exist_ok=True)
+    chosen_template_path_draky = f"{chosen_template.path}/.draky"
+    shutil.copytree(chosen_template_path_draky, PATH_PROJECT_CONFIG, dirs_exist_ok=True)
 
     with open(PATH_PROJECT_CONFIG + "/dk.env", "x", encoding='utf8') as file:
         file.write(f"# Do not manually edit this file. It's managed by Draky.\n"

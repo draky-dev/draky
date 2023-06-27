@@ -87,7 +87,8 @@ else:
     # All reminder arguments, no matter if flags or not.
     reminder_args = sys.argv[2:]
     if service is None:
-        process_executor.execute([command_file] + reminder_args)
+        command = [command_file] + reminder_args
+        process_executor.execute(command)
     else:
         command_variables = config_manager.get_command_vars(custom_command_name)
         process_executor.execute_inside_container(
