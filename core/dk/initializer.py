@@ -69,7 +69,7 @@ def initialize():
     chosen_template_path_draky = f"{chosen_template.path}/.draky"
     shutil.copytree(chosen_template_path_draky, PATH_PROJECT_CONFIG, dirs_exist_ok=True)
 
-    with open(PATH_PROJECT_CONFIG + "/dk.env", "x", encoding='utf8') as file:
+    with open(PATH_PROJECT_CONFIG + "/core.dk.env", "x", encoding='utf8') as file:
         file.write(f"# Do not manually edit this file. It's managed by Draky.\n"
                    f"DRAKY_PROJECT_ID=\"{project_id}\"\n"
                    f"DRAKY_ENVIRONMENT=\"dev\"")
