@@ -118,7 +118,7 @@ class ProcessExecutor:
         dest = f"{dest_path}/{pathlib.PurePath(script_path).name}"
         # Prepare the dir path for the script to be copied.
         mkdir_command = self.get_command_base()
-        mkdir_command.extend(['exec', service, 'mkdir',  '-p', dest_path])
+        mkdir_command.extend(['exec', '-T', service, 'mkdir',  '-p', dest_path])
         self.execute(mkdir_command)
 
         # Copy script into container to avoid having to pipe commands, as that would disable
