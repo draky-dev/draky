@@ -91,12 +91,19 @@ execute_core() {
   COLUMNS=$(tput cols)
   export COLUMNS
 
-  docker exec \
-  -it \
-  --user="$DOCKER_HOST_UID:$DOCKER_HOST_GID" \
-  -e "DRAKY_PROJECT_CONFIG_CURRENT_ROOT=$PROJECT_CONFIG_PATH" \
-  -e "COLUMNS=$COLUMNS" \
-  "${CONTAINER_NAME}" dk-core "$@" < /dev/stdin
+  ARGS=(
+    -i
+    --user="$DOCKER_HOST_UID:$DOCKER_HOST_GID"
+    -e "DRAKY_PROJECT_CONFIG_CURRENT_ROOT=$PROJECT_CONFIG_PATH"
+    -e "COLUMNS=$COLUMNS"
+  )
+
+  # If we are not sending anything through stdin, we can allocate a pseudo-tty.
+  if [ -t 0 ]; then
+      ARGS+=(-t)
+  fi
+
+  docker exec "${ARGS[@]}" "${CONTAINER_NAME}" dk-core "$@" < /dev/stdin
 
   if [ "$?" = "100" ]; then
     destroy_core

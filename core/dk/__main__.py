@@ -21,7 +21,7 @@ config_manager.init()
 process_executor = ProcessExecutor(config_manager)
 
 if config_manager.has_project_switched():
-    print("Switching projects")
+    print("Switching projects.")
     process_executor.env_freeze()
     sys.exit(100)
 
