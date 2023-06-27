@@ -67,6 +67,7 @@ start_core() {
     fi
 
     docker create "${ARGS[@]}" ${IMAGE_NAME}:${DRAKY_VERSION} > /dev/null
+    echo "draky core is live."
   fi
 
   if ! docker top "${CONTAINER_NAME}" &> /dev/null; then
@@ -77,9 +78,9 @@ start_core() {
 destroy_core() {
   if docker container inspect ${CONTAINER_NAME} &> /dev/null; then
     docker rm -f -v "$CONTAINER_NAME" > /dev/null
-    echo "draky core has been destroyed."
+    echo "draky core has been turned off."
   else
-    echo "draky core is already destroyed."
+    echo "draky core is turned off."
   fi
 }
 
