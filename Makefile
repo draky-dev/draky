@@ -1,4 +1,5 @@
-NAME = ghcr.io/draky-dev/draky
+SHORT_NAME = draky
+NAME = ghcr.io/draky-dev/${SHORT_NAME}
 # Let's handle situation where VERSION is passed as empty. That'll allow us to simplify the pipeline.
 ifndef VERSION
 	override VERSION = local-build
@@ -14,7 +15,7 @@ build:
 	[ ! -d "${DIST_PATH}" ] || rm -r ${DIST_PATH}
 	docker buildx build -f ./Dockerfile --rm -t ${NAME}:${VERSION} .
 	mkdir -p ${DIST_BIN_PATH}
-	docker save -o ${DIST_PATH}/image.tar ${NAME}:${VERSION}
+	docker save -o ${DIST_PATH}/${SHORT_NAME}-${VERSION}.image.tar ${NAME}:${VERSION}
 	TEMPLATE_DRAKY_VERSION=${VERSION} TEMPLATE_DRAKY_NAME=${NAME} ./bin/template-renderer.sh -t ./bin/templates/draky.template -o ${DIST_BIN_PATH}/draky
 	find ${DIST_BIN_PATH} -type f -exec chmod 755 {} \;
 
