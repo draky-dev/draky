@@ -10,10 +10,12 @@ from dk.utils import find_files_weighted_by_filename
 class ConfigManager:
     """This class handles everything related to configuration and overall environment.
     """
+    __draky_prefix: str = 'DRAKY_'
     # These variables will be empty if we are just initializing the project.
     __project: str|None
     __env: str|None
     __commands_vars: dict = {}
+    __vars: list = []
 
     def init(self):
         """Initialize configuration manager.
@@ -23,6 +25,10 @@ class ConfigManager:
             if 'DRAKY_PROJECT_ID' in os.environ else None
         self.__env = os.environ['DRAKY_ENVIRONMENT']\
             if 'DRAKY_ENVIRONMENT' in os.environ else None
+
+        #@todo Find all env variables starting with DRAKY_ and add them to self.__vars.
+        draky_vars = list(key for key in os.environ if key.startswith(self.__draky_prefix))
+        self.__vars = self.__vars + draky_vars
 
     @staticmethod
     def has_project_switched() -> bool:
@@ -48,12 +54,17 @@ class ConfigManager:
             return {}
         return self.__commands_vars[command].copy()
 
+    def get_vars(self) -> dict:
+        """Returns a dictionary of currently set environment variables.
+        """
+        return {k: v for k, v in os.environ.items() if k in self.__vars}
+
     def __load_environment_variables(self):
         files = find_files_weighted_by_filename("*dk.env", {
             'core.dk.env': -10,
-            'cmd.dk.env': 10,
-            'local.dk.env': 20,
+            'local.dk.env': 10,
         }, PATH_PROJECT_CONFIG)
+        vars_list: list = []
         for path, filename in files:
             path_full = path + '/' + filename
             # @todo We should prefix all variables before loading to exclude any possibility of name
@@ -61,16 +72,8 @@ class ConfigManager:
 
             # We are loading env variables to resolve references.
             load_dotenv(path_full, override=True)
-
-            # Gather cmd vars.
-            if filename.endswith('cmd.dk.env'):
-                cmd_vars = dotenv_values(path_full)
-                command, _, _, _ = filename.split('.')
-                if command not in self.__commands_vars:
-                    self.__commands_vars[command] = {}
-                for cmd_var in cmd_vars:
-                    # We assign values that have references already resolved.
-                    self.__commands_vars[command][cmd_var] = os.environ[cmd_var]
+            vars_list = vars_list + list(set(dotenv_values(path_full).keys()) - set(vars_list))
+        self.__vars = vars_list
 
 # We intentionally keep the same project config path as on host. That way docker-compose inside the
 # container won't complain that docker-compose.yml file doesn't exist.

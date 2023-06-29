@@ -41,6 +41,12 @@ class EnvCommandsExecutor(CommandExecutor):
             Command('stop', 'Freeze the environment', self.process_executor.env_freeze)
         self.commands['down'] =\
             Command('down', 'Destroy the environment', self.process_executor.env_destroy)
+        self.commands['init'] =\
+            Command(
+                'init',
+                'Create the environment configuration for the project.',
+                None,
+            )
 
     def run(self, command_name: str):
         """Run core command.
@@ -49,7 +55,8 @@ class EnvCommandsExecutor(CommandExecutor):
             raise ValueError("Unsupported env command.")
 
         command = self.commands.get(command_name)
-        command.callback()
+        if command.callback:
+            command.callback()
 
     def get_commands(self) -> list[Command]:
         """Returns the supported core commands.
@@ -71,6 +78,8 @@ class CoreCommandsExecutor(CommandExecutor):
     def __init__(self, process_executor: ProcessExecutor):
         self.process_executor = process_executor
         self.commands['update'] = Command('update', 'Update draky.', self._update_draky)
+        self.commands['destroy'] = Command('destroy', 'Destroy draky core.', None)
+        self.commands['start'] = Command('start', 'Start draky core.', None)
 
     def run(self, command_name: str):
         """Run core command.

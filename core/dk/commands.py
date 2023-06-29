@@ -15,7 +15,7 @@ class EmptyCommand:
 class Command(EmptyCommand):
     """Dataclass representing a command.
     """
-    callback: Callable[[], None]
+    callback: Callable[[], None]|None
 
 @dataclass
 class ServiceCommand(EmptyCommand):

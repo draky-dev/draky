@@ -19,8 +19,8 @@ build-test:         build test
 build-test-cleanup: build-test cleanup
 
 test:
-	docker run --rm ${NAME}:${VERSION} dk-lint
-	docker run --rm ${NAME}:${VERSION} dk-test
+	docker run -t --rm ${NAME}:${VERSION} dk-lint
+	docker run -t --rm ${NAME}:${VERSION} dk-test
 
 cleanup:
 	docker rmi "${NAME}:${VERSION}"

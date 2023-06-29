@@ -68,7 +68,7 @@ class ProcessExecutor:
                 raise ValueError("stdin has already been used up")
             self.stdin_passed = True
         stdin = sys.stdin if pass_stdin else DEVNULL
-        run(command, check=False, stdin=stdin)
+        run(command, check=False, stdin=stdin, env=self.config.get_vars())
 
     def execute_pipe(
             self,
@@ -90,7 +90,7 @@ class ProcessExecutor:
         stdin = previous_process.stdout if previous_process else default_stdin
 
         with Popen(
-            first_command, stdout=stdout, stderr=sys.stderr, stdin=stdin
+            first_command, stdout=stdout, stderr=sys.stderr, stdin=stdin, env=self.config.get_vars()
         ) as process:
             if commands:
                 self.execute_pipe(commands, process)

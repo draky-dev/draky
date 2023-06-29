@@ -8,9 +8,9 @@ DRAKY_VERSION=$TEMPLATE_DRAKY_VERSION
 PROJECT_CONFIG_DIR=.draky
 CORE_GLOBAL_CONFIG_PATH=/global-config
 
-DOCKER_HOST_UID="${UID}"
-DOCKER_HOST_GID="$(id -g)"
-DOCKER_GID="$(stat -c '%g' /var/run/docker.sock)"
+DRAKY_HOST_UID="${UID}"
+DRAKY_HOST_GID="$(id -g)"
+DRAKY_GID="$(stat -c '%g' /var/run/docker.sock)"
 
 COLOR_RESET='\033[0m'
 COLOR_BLUE='\033[0;94m'
@@ -19,9 +19,9 @@ COLOR_WHITE='\033[0;97m'
 COLOR_RED='\033[0;91m'
 
 if [ "$(echo $(uname -s) | cut -c 1-5)" == "Linux" ]; then
-  export DOCKER_HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
+  export DRAKY_HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
 else
-  export DOCKER_HOST_IP=host.docker.internal
+  export DRAKY_HOST_IP=host.docker.internal
 fi
 
 find_project_config_path() {
@@ -49,7 +49,7 @@ start_core() {
 
     ARGS=(
       --name "$CONTAINER_NAME"
-      --group-add="$DOCKER_GID"
+      --group-add="$DRAKY_GID"
       -v /var/run/docker.sock:/var/run/docker.sock
       -v "$PROJECT_CONFIG_PATH:$PROJECT_CONFIG_PATH"
       -v "$HOST_GLOBAL_CONFIG_PATH:$CORE_GLOBAL_CONFIG_PATH"
@@ -57,9 +57,9 @@ start_core() {
       -e "DRAKY_PROJECT_CONFIG_ROOT=$PROJECT_CONFIG_PATH"
       -e "DRAKY_GLOBAL_CONFIG_ROOT=$CORE_GLOBAL_CONFIG_PATH"
       -e "DRAKY_PROJECT_ROOT=$PROJECT_ROOT"
-      -e "DOCKER_HOST_UID=$DOCKER_HOST_UID"
-      -e "DOCKER_HOST_GID=$DOCKER_HOST_GID"
-      -e "DOCKER_HOST_IP=$DOCKER_HOST_IP"
+      -e "DRAKY_HOST_UID=$DRAKY_HOST_UID"
+      -e "DRAKY_HOST_GID=$DRAKY_HOST_GID"
+      -e "DRAKY_HOST_IP=$DRAKY_HOST_IP"
     )
 
     if [[ $DRAKY_MOUNT_CORE ]]; then
@@ -93,7 +93,7 @@ execute_core() {
 
   ARGS=(
     -i
-    --user="$DOCKER_HOST_UID:$DOCKER_HOST_GID"
+    --user="$DRAKY_HOST_UID:$DRAKY_HOST_GID"
     -e "DRAKY_PROJECT_CONFIG_CURRENT_ROOT=$PROJECT_CONFIG_PATH"
     -e "COLUMNS=$COLUMNS"
   )
