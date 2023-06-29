@@ -8,20 +8,25 @@ endif
 DIST_PATH = ./dist
 DIST_BIN_PATH = ${DIST_PATH}/bin
 
-.ONESHELL:
+# Version processed.
+VER = $$(echo ${VERSION} | sed 's/^v//g')
+
 .PHONY: $(MAKECMDGOALS)
+
+install_build_dependencies_apk:
+	apk add bash gettext
 
 build:
 	[ ! -d "${DIST_PATH}" ] || rm -r ${DIST_PATH}
-	docker buildx build -f ./Dockerfile --rm -t ${NAME}:${VERSION} .
+	docker buildx build -f ./Dockerfile --rm -t ${NAME}:${VER} .
 	mkdir -p ${DIST_BIN_PATH}
-	docker save -o ${DIST_PATH}/${SHORT_NAME}-${VERSION}.image.tar ${NAME}:${VERSION}
-	TEMPLATE_DRAKY_VERSION=${VERSION} TEMPLATE_DRAKY_NAME=${NAME} ./bin/template-renderer.sh -t ./bin/templates/draky.template -o ${DIST_BIN_PATH}/draky
+	docker save -o ${DIST_PATH}/${SHORT_NAME}-${VER}.image.tar ${NAME}:${VER}
+	TEMPLATE_DRAKY_VERSION=${VER} TEMPLATE_DRAKY_NAME=${NAME} ./bin/template-renderer.sh -t ./bin/templates/draky.template -o ${DIST_BIN_PATH}/draky
 	find ${DIST_BIN_PATH} -type f -exec chmod 755 {} \;
 
 test:
-	docker run -t --rm ${NAME}:${VERSION} dk-lint
-	docker run -t --rm ${NAME}:${VERSION} dk-test
+	docker run -t --rm ${NAME}:${VER} dk-lint
+	docker run -t --rm ${NAME}:${VER} dk-test
 
 cleanup:
-	docker rmi "${NAME}:${VERSION}"
+	docker rmi "${NAME}:${VER}"

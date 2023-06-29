@@ -1,0 +1,45 @@
+name: Build
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+env:
+  IMAGE_PATH: 'dist/draky-local-build.image.tar'
+  DRAKY_IMAGE_ARTIFACT_NAME: 'draky-image'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: docker:24.0.2-cli-alpine3.18
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v3.5.3
+      - name: Installing basic dependencies.
+        run: apk add make
+      - name: Install other dependencies.
+        run: make install_build_dependencies_apk
+      - name: Building.
+        run: make build
+      - name: Preserve image
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: ${{ env.DRAKY_IMAGE_ARTIFACT_NAME }}
+          path: ${{ env.IMAGE_PATH }}
+          retention-days: 1
+  test:
+    runs-on: ubuntu-latest
+    container: docker:24.0.2-cli-alpine3.18
+    needs: [build]
+    steps:
+    - name: checkout repo
+      uses: actions/checkout@v3.5.3
+    - name: Installing basic dependencies.
+      run: apk add make
+    - name: Retrieve saved Docker image
+      uses: actions/download-artifact@v3.0.2
+      with:
+        name: ${{ env.DRAKY_IMAGE_ARTIFACT_NAME }}
+        path: dist
+    - name: Loading image.
+      run: docker load --input $IMAGE_PATH
+    - name: Testing.
+      run: make test
