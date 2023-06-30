@@ -58,13 +58,13 @@ def initialize():
         available_templates_map: dict[str, Template] = {
             default_template.name: default_template,
         }
-        for custom_template in custom_templates:
-            print(f"- {custom_template.name}\n")
-            available_templates_map[custom_template.name] = custom_template
+        for index, custom_template in enumerate(custom_templates):
+            print(f"[{index}]: {custom_template.name}\n")
+            available_templates_map[str(index)] = custom_template
         print(f"{Style.RESET_ALL}")
-
-        chosen_template_name = input(f"{Fore.LIGHTBLUE_EX}Enter template name: {Style.RESET_ALL}")
-        chosen_template = available_templates_map[chosen_template_name]
+        chosen_template_number =\
+            input(f"{Fore.LIGHTBLUE_EX}Enter template number: {Style.RESET_ALL}")
+        chosen_template = available_templates_map[str(chosen_template_number)]
 
     chosen_template_path_draky = f"{chosen_template.path}/.draky"
     shutil.copytree(chosen_template_path_draky, PATH_PROJECT_CONFIG, dirs_exist_ok=True)
