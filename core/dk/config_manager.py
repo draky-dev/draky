@@ -2,7 +2,9 @@
 """
 
 import os
-from dotenv import load_dotenv, dotenv_values
+import io
+from pathlib import Path
+from dotenv import dotenv_values
 
 from dk.utils import find_files_weighted_by_filename
 
@@ -15,20 +17,21 @@ class ConfigManager:
     __project: str|None
     __env: str|None
     __commands_vars: dict = {}
-    __vars: list = []
+    __vars: dict[str, str] = {}
 
     def init(self):
         """Initialize configuration manager.
         """
         self.__load_environment_variables()
-        self.__project = os.environ['DRAKY_PROJECT_ID']\
-            if 'DRAKY_PROJECT_ID' in os.environ else None
-        self.__env = os.environ['DRAKY_ENVIRONMENT']\
-            if 'DRAKY_ENVIRONMENT' in os.environ else None
+        self.__project = self.__vars['DRAKY_PROJECT_ID']\
+            if 'DRAKY_PROJECT_ID' in self.__vars else None
+        self.__env = self.__vars['DRAKY_ENVIRONMENT']\
+            if 'DRAKY_ENVIRONMENT' in self.__vars else None
 
-        #@todo Find all env variables starting with DRAKY_ and add them to self.__vars.
-        draky_vars = list(key for key in os.environ if key.startswith(self.__draky_prefix))
-        self.__vars = self.__vars + draky_vars
+        # Add all existing variables that starts with the prefix to the dictionary.
+        self.__vars.update(
+            {k: v for k, v in os.environ.items() if k.startswith(self.__draky_prefix)}
+        )
 
     @staticmethod
     def has_project_switched() -> bool:
@@ -57,7 +60,7 @@ class ConfigManager:
     def get_vars(self) -> dict:
         """Returns a dictionary of currently set environment variables.
         """
-        return {k: v for k, v in os.environ.items() if k in self.__vars}
+        return self.__vars
 
     def __load_environment_variables(self):
         files = find_files_weighted_by_filename("*dk.env", {
@@ -65,15 +68,14 @@ class ConfigManager:
             'local.dk.env': 10,
         }, PATH_PROJECT_CONFIG)
         vars_list: list = []
+        files_content_list: list[str] = []
         for path, filename in files:
             path_full = path + '/' + filename
-            # @todo We should prefix all variables before loading to exclude any possibility of name
-            #       clash with system's env variables, and unexpected behavior that it could cause.
+            files_content_list.append(Path(path_full).read_text(encoding='utf8'))
 
             # We are loading env variables to resolve references.
-            load_dotenv(path_full, override=True)
             vars_list = vars_list + list(set(dotenv_values(path_full).keys()) - set(vars_list))
-        self.__vars = vars_list
+        self.__vars = dotenv_values(stream=io.StringIO("\n".join(files_content_list)))
 
 # We intentionally keep the same project config path as on host. That way docker-compose inside the
 # container won't complain that docker-compose.yml file doesn't exist.
