@@ -3,6 +3,7 @@
 import os
 import sys
 import shutil
+from typing import Generator
 from dataclasses import dataclass
 
 from colorama import Fore, Style
@@ -24,7 +25,7 @@ class CustomTemplate(Template):
     path_base: str
 
 
-def __templates_in_path(path_to_parent) -> list[CustomTemplate]:
+def __templates_in_path(path_to_parent) -> Generator[CustomTemplate, None, None]:
     """Finds the list of template paths in the given girectory.
     """
     for fname in os.listdir(path_to_parent):
@@ -46,7 +47,7 @@ def initialize(config_manager: ConfigManager):
 
     custom_templates: list[Template] = []
     if os.path.exists(custom_templates_root_path):
-        custom_templates = __templates_in_path(custom_templates_root_path)
+        custom_templates = list(__templates_in_path(custom_templates_root_path))
 
     chosen_template: Template|None = None
     if not custom_templates:
@@ -56,12 +57,11 @@ def initialize(config_manager: ConfigManager):
 
     if not chosen_template:
         print(f"{Fore.LIGHTWHITE_EX}")
-        available_templates_map: dict[str, Template] = {
-            default_template.name: default_template,
-        }
-        for index, custom_template in enumerate(custom_templates):
-            print(f"[{index}]: {custom_template.name}\n")
-            available_templates_map[str(index)] = custom_template
+        available_templates_map: dict[str, Template] = {}
+        available_templates: list[Template] = [default_template] + custom_templates
+        for index, template in enumerate(available_templates):
+            print(f"[{index}]: {template.name}")
+            available_templates_map[str(index)] = template
         print(f"{Style.RESET_ALL}")
         chosen_template_number =\
             input(f"{Fore.LIGHTBLUE_EX}Enter template number: {Style.RESET_ALL}")

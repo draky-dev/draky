@@ -105,9 +105,16 @@ execute_core() {
 
   docker exec "${ARGS[@]}" "${CONTAINER_NAME}" dk-core "$@" < /dev/stdin
 
-  if [ "$?" = "100" ]; then
+  local EXIT_CODE="$?"
+
+  if [ "$EXIT_CODE" -eq 100 ]; then
     destroy_core
     execute_core "$@"
+    exit 0
+  elif [ "$EXIT_CODE" -eq 0 ]; then
+    exit 0
+  else
+    exit "$EXIT_CODE"
   fi
 }
 
