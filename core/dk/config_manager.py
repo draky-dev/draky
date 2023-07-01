@@ -22,7 +22,7 @@ class ConfigManager:
     def init(self):
         """Initialize configuration manager.
         """
-        self.__load_environment_variables()
+        self.__load_variables()
         self.__project = self.__vars['DRAKY_PROJECT_ID']\
             if 'DRAKY_PROJECT_ID' in self.__vars else None
         self.__env = self.__vars['DRAKY_ENVIRONMENT']\
@@ -62,7 +62,7 @@ class ConfigManager:
         """
         return self.__vars
 
-    def __load_environment_variables(self):
+    def __load_variables(self):
         files = find_files_weighted_by_filename("*dk.env", {
             'core.dk.env': -10,
             'local.dk.env': 10,
