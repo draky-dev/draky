@@ -5,7 +5,7 @@ import sys
 import pathlib
 from subprocess import Popen, PIPE, run, DEVNULL
 
-from dk.config_manager import ConfigManager, PATH_ENVIRONMENTS
+from dk.config_manager import ConfigManager
 from dk.utils import get_path_up_to_project_root
 
 
@@ -30,7 +30,7 @@ class ProcessExecutor:
             '-p',
             f"{self.config.get_project_id()}",
             '-f',
-            f"{PATH_ENVIRONMENTS}/{self.config.get_env()}/docker-compose.yml"
+            f"{self.config.paths.environments}/{self.config.get_env()}/docker-compose.yml"
         ]
 
     def env_start(self) -> None:

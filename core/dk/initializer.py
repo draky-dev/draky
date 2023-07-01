@@ -7,7 +7,8 @@ from dataclasses import dataclass
 
 from colorama import Fore, Style
 
-from dk.config_manager import PATH_PROJECT_CONFIG, PATH_TEMPLATE_DEFAULT, PATH_GLOBAL_CONFIG
+from dk.config_manager import ConfigManager
+
 
 @dataclass
 class Template:
@@ -32,16 +33,16 @@ def __templates_in_path(path_to_parent) -> list[CustomTemplate]:
         if os.path.isdir(template_base) and os.path.isdir(template_root):
             yield CustomTemplate(fname, template_base, template_root)
 
-def initialize():
+def initialize(config_manager: ConfigManager):
     """ Function initializing new project. """
-    if os.listdir(PATH_PROJECT_CONFIG):
+    if os.listdir(config_manager.paths.project_config):
         print(f"{Fore.LIGHTRED_EX}\".drake\" directory already exists in the project and is not "
               f"empty. If you want to initialize the project again, delete it.{Style.RESET_ALL}")
         sys.exit(1)
 
     project_id = input(f"{Fore.LIGHTBLUE_EX}Enter project id: {Style.RESET_ALL}")
-    custom_templates_root_path: str = f"{PATH_GLOBAL_CONFIG}/templates"
-    default_template = Template('default', PATH_TEMPLATE_DEFAULT)
+    custom_templates_root_path: str = f"{config_manager.paths.global_config}/templates"
+    default_template = Template('default', config_manager.paths.default_template)
 
     custom_templates: list[Template] = []
     if os.path.exists(custom_templates_root_path):
@@ -67,9 +68,11 @@ def initialize():
         chosen_template = available_templates_map[str(chosen_template_number)]
 
     chosen_template_path_draky = f"{chosen_template.path}/.draky"
-    shutil.copytree(chosen_template_path_draky, PATH_PROJECT_CONFIG, dirs_exist_ok=True)
+    shutil.copytree(
+        chosen_template_path_draky, config_manager.paths.project_config, dirs_exist_ok=True
+    )
 
-    with open(PATH_PROJECT_CONFIG + "/core.dk.env", "x", encoding='utf8') as file:
+    with open(config_manager.paths.project_config + "/core.dk.env", "x", encoding='utf8') as file:
         file.write(f"# Do not manually edit this file. It's managed by Draky.\n"
                    f"DRAKY_PROJECT_ID=\"{project_id}\"\n"
                    f"DRAKY_ENVIRONMENT=\"dev\"")

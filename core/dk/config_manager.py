@@ -1,13 +1,23 @@
 """Configuration manager.
 """
-
 import os
 import io
+from dataclasses import dataclass
 from pathlib import Path
 from dotenv import dotenv_values
 
 from dk.utils import find_files_weighted_by_filename
 
+
+@dataclass
+class ConfigPaths:
+    """Dataclass storing information about paths important for configuration.
+    """
+    project_config: str
+    global_config: str
+    environments: str
+    commands: str
+    default_template: str
 
 class ConfigManager:
     """This class handles everything related to configuration and overall environment.
@@ -19,9 +29,35 @@ class ConfigManager:
     __commands_vars: dict = {}
     __vars: dict[str, str] = {}
 
-    def init(self):
-        """Initialize configuration manager.
-        """
+    paths: ConfigPaths
+    version: str
+
+    def __init__(self):
+        if 'DRAKY_PROJECT_CONFIG_ROOT' not in os.environ:
+            raise ValueError("Required DRAKY_PROJECT_CONFIG_ROOT environment variable is missing.")
+        # We intentionally keep the same project config path as on host. That way docker-compose
+        # inside the container won't complain that docker-compose.yml file doesn't exist.
+        project_config_path = os.environ['DRAKY_PROJECT_CONFIG_ROOT']
+
+        if 'DRAKY_GLOBAL_CONFIG_ROOT' not in os.environ:
+            raise ValueError("Required DRAKY_PROJECT_CONFIG_ROOT environment variable is missing.")
+        global_config_path = os.environ['DRAKY_GLOBAL_CONFIG_ROOT']
+
+        environments_path = project_config_path + '/env'
+        commands_path = project_config_path + '/commands'
+
+        self.paths = ConfigPaths(
+            project_config=project_config_path,
+            global_config=global_config_path,
+            environments=environments_path,
+            commands=commands_path,
+            default_template='/opt/dk-core/resources/empty-template',
+        )
+
+        if 'DRAKY_VERSION' not in os.environ:
+            raise ValueError("Required DRAKY_VERSION environment variable is missing.")
+        self.version = os.environ['DRAKY_VERSION']
+
         self.__load_variables()
         self.__project = self.__vars['DRAKY_PROJECT_ID']\
             if 'DRAKY_PROJECT_ID' in self.__vars else None
@@ -66,7 +102,7 @@ class ConfigManager:
         files = find_files_weighted_by_filename("*dk.env", {
             'core.dk.env': -10,
             'local.dk.env': 10,
-        }, PATH_PROJECT_CONFIG)
+        }, self.paths.project_config)
         vars_list: list = []
         files_content_list: list[str] = []
         for path, filename in files:
@@ -76,12 +112,3 @@ class ConfigManager:
             # We are loading env variables to resolve references.
             vars_list = vars_list + list(set(dotenv_values(path_full).keys()) - set(vars_list))
         self.__vars = dotenv_values(stream=io.StringIO("\n".join(files_content_list)))
-
-# We intentionally keep the same project config path as on host. That way docker-compose inside the
-# container won't complain that docker-compose.yml file doesn't exist.
-PATH_PROJECT_CONFIG = os.environ['DRAKY_PROJECT_CONFIG_ROOT']
-PATH_GLOBAL_CONFIG = os.environ['DRAKY_GLOBAL_CONFIG_ROOT']
-DRAKY_VERSION = os.environ['DRAKY_VERSION']
-PATH_COMMANDS = PATH_PROJECT_CONFIG + '/commands'
-PATH_ENVIRONMENTS = PATH_PROJECT_CONFIG + '/env'
-PATH_TEMPLATE_DEFAULT = '/opt/dk-core/resources/empty-template'

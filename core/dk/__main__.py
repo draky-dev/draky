@@ -8,15 +8,12 @@ from colorama import Fore, Style
 from dk.args_parser import ArgsParser
 from dk.commands_executor import EnvCommandsExecutor, CoreCommandsExecutor
 from dk.process_executor import ProcessExecutor
-from dk.config_manager import ConfigManager,\
-    PATH_ENVIRONMENTS, PATH_PROJECT_CONFIG, PATH_COMMANDS, DRAKY_VERSION
+from dk.config_manager import ConfigManager
 from dk.custom_commands_provider import provide_custom_commands
 from dk.initializer import initialize
 
 
 config_manager = ConfigManager()
-
-config_manager.init()
 
 process_executor = ProcessExecutor(config_manager)
 
@@ -29,11 +26,11 @@ if config_manager.has_project_switched():
 # therwise config manager won't have enough data.
 try:
     if sys.argv[1] == 'env' and sys.argv[2] == 'init':
-        initialize()
+        initialize(config_manager)
 except IndexError:
     pass
 
-args_parser = ArgsParser(version=DRAKY_VERSION)
+args_parser = ArgsParser(version=config_manager.version)
 
 env_commands_executor = EnvCommandsExecutor(process_executor)
 args_parser.register_argument_group(
@@ -46,8 +43,8 @@ args_parser.register_argument_group(
 
 # Add custom commands to the parser. This is needed for them to be included in the help command.
 custom_commands = provide_custom_commands("*.dk.sh", {
-    PATH_COMMANDS: 10,
-}, PATH_PROJECT_CONFIG)
+    config_manager.paths.commands: 10,
+}, config_manager.paths.project_config)
 for _, custom_command in custom_commands.items():
     args_parser.add_command(custom_command.name, custom_command.help)
 
@@ -61,11 +58,11 @@ if args_parser.has_first_level_command(sys.argv[1]):
     args = args_parser.parse()
     if sys.argv[1] == env_commands_executor.root():
         # Find all environments.
-        available_environments = next(os.walk(PATH_ENVIRONMENTS))[1]
+        available_environments = next(os.walk(config_manager.paths.environments))[1]
         if config_manager.get_env() not in available_environments:
             print(
                 f"Environment '{config_manager.get_env()}' has not been found in"
-                f" '{PATH_ENVIRONMENTS}'."
+                f" '{config_manager.paths.environments}'."
             )
             sys.exit(1)
         env_commands_executor.run(args.COMMAND)
