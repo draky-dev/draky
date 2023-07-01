@@ -1,6 +1,4 @@
-#!/usr/bin/env sh
-
-CWD="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
+#!/usr/bin/env bash
 
 CONTAINER_NAME=draky
 IMAGE_NAME=$TEMPLATE_DRAKY_NAME
@@ -13,16 +11,18 @@ DRAKY_HOST_GID="$(id -g)"
 DRAKY_GID="$(stat -c '%g' /var/run/docker.sock)"
 
 COLOR_RESET='\033[0m'
-COLOR_BLUE='\033[0;94m'
-COLOR_GREEN='\033[0;92m'
-COLOR_WHITE='\033[0;97m'
+#COLOR_BLUE='\033[0;94m'
+#COLOR_GREEN='\033[0;92m'
+#COLOR_WHITE='\033[0;97m'
 COLOR_RED='\033[0;91m'
 
-if [ "$(echo $(uname -s) | cut -c 1-5)" == "Linux" ]; then
-  export DRAKY_HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
+if [ "$(uname -s | cut -c 1-5)" == "Linux" ]; then
+  DRAKY_HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
 else
-  export DRAKY_HOST_IP=host.docker.internal
+  DRAKY_HOST_IP=host.docker.internal
 fi
+
+export DRAKY_HOST_IP
 
 find_project_config_path() {
   if [ "$PWD" = / ]; then
@@ -66,7 +66,7 @@ start_core() {
         ARGS+=(-v "$DRAKY_MOUNT_CORE:/opt/dk-core")
     fi
 
-    docker create "${ARGS[@]}" ${IMAGE_NAME}:${DRAKY_VERSION} > /dev/null
+    docker create "${ARGS[@]}" "${IMAGE_NAME}:${DRAKY_VERSION}" > /dev/null
     echo "draky core is live."
   fi
 
@@ -131,7 +131,7 @@ if [ "$1" == "env" ] && [ "$2" == "init" ]; then
   exit 0
 fi
 
-if [ -z $PROJECT_CONFIG_PATH ]; then
+if [ -z "$PROJECT_CONFIG_PATH" ]; then
   echo -e "${COLOR_RED}Project configuration could not be found${COLOR_RESET}"
   exit 1
 fi
