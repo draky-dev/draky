@@ -4,7 +4,7 @@
 import argparse
 
 from dk.argparse_actions import NoAction, ChoicesAction, VersionAction
-from dk.commands import Command
+from dk.command import CallableCommand, EmptyCommand
 
 
 class ArgsParser:
@@ -22,7 +22,7 @@ class ArgsParser:
         args_subparsers = args_parser.add_subparsers(dest='COMMAND')
         self.commands_parsers = args_subparsers
 
-    def register_argument_group(self, name: str, help_text: str, commands: list[Command]):
+    def register_argument_group(self, name: str, help_text: str, commands: list[CallableCommand]):
         """Register argument group.
         """
         args_parser = self.commands_parsers.add_parser(name, help=help_text)
@@ -44,12 +44,12 @@ class ArgsParser:
         """
         return self.main_parser.parse_known_args(args)[0]
 
-    def add_command(self, command_name, help_text):
+    def add_command(self, command: EmptyCommand) -> None:
         """Add custom command.
         """
         args_parser_customscript = self.commands_parsers.add_parser(
-            command_name,
-            help=help_text
+            command.name,
+            help=command.help
         )
         args_parser_customscript.add_argument(
             'args',
@@ -57,6 +57,12 @@ class ArgsParser:
             type=str,
             help="Arguments passed to the script"
         )
+
+    def add_commands(self, commands: list[EmptyCommand]) -> None:
+        """Add a list of commands.
+        """
+        for command in commands:
+            self.add_command(command)
 
     def has_first_level_command(self, name: str) -> bool:
         """Check if first level command with a given name is currently handled.

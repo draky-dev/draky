@@ -11,15 +11,20 @@ class EmptyCommand:
     name: str
     help: str
 
+
 @dataclass
-class Command(EmptyCommand):
+class CallableCommand(EmptyCommand):
     """Dataclass representing a command.
     """
     callback: Callable[[], None]|None
+
+    def __call__(self, *args, **kwargs):
+        self.callback()
+
 
 @dataclass
 class ServiceCommand(EmptyCommand):
     """Dataclass representing a service command.
     """
     service: str
-    command: str
+    cmd: str

@@ -6,10 +6,11 @@ import sys
 from colorama import Fore, Style
 
 from dk.args_parser import ArgsParser
-from dk.commands_executor import EnvCommandsExecutor, CoreCommandsExecutor
+from dk.core_commands_provider import CoreCommandsProvider
+from dk.env_commands_provider import EnvCommandsProvider
 from dk.process_executor import ProcessExecutor
 from dk.config_manager import ConfigManager
-from dk.custom_commands_provider import provide_custom_commands
+from dk.custom_commands_provider import CustomCommandsProvider
 from dk.initializer import initialize
 
 
@@ -32,21 +33,19 @@ except IndexError:
 
 args_parser = ArgsParser(version=config_manager.version)
 
-env_commands_executor = EnvCommandsExecutor(process_executor)
+env_commands_provider = EnvCommandsProvider(process_executor)
 args_parser.register_argument_group(
-    'env', 'Commands for environment management.', env_commands_executor.get_commands()
+    'env', 'Commands for environment management.', env_commands_provider.get_commands()
 )
-core_commands_executor = CoreCommandsExecutor(process_executor)
+core_commands_provider = CoreCommandsProvider(process_executor)
 args_parser.register_argument_group(
-    'core', 'Commands for core management.', core_commands_executor.get_commands()
+    'core', 'Commands for core management.', core_commands_provider.get_commands()
 )
 
+custom_commands_provider = CustomCommandsProvider(config_manager)
+
 # Add custom commands to the parser. This is needed for them to be included in the help command.
-custom_commands = provide_custom_commands("*.dk.sh", {
-    config_manager.paths.commands: 10,
-}, config_manager.paths.project_config)
-for _, custom_command in custom_commands.items():
-    args_parser.add_command(custom_command.name, custom_command.help)
+args_parser.add_commands(custom_commands_provider.get_commands())
 
 # Display help by default.
 if len(sys.argv) == 1:
@@ -56,7 +55,7 @@ if len(sys.argv) == 1:
 # directly to proper scripts. We are not validating them.
 if args_parser.has_first_level_command(sys.argv[1]):
     args = args_parser.parse()
-    if sys.argv[1] == env_commands_executor.root():
+    if sys.argv[1] == env_commands_provider.root():
         # Find all environments.
         available_environments = next(os.walk(config_manager.paths.environments))[1]
         if config_manager.get_env() not in available_environments:
@@ -65,19 +64,19 @@ if args_parser.has_first_level_command(sys.argv[1]):
                 f" '{config_manager.paths.environments}'."
             )
             sys.exit(1)
-        env_commands_executor.run(args.COMMAND)
-    elif sys.argv[1] == core_commands_executor.root():
-        core_commands_executor.run(args.COMMAND)
+        env_commands_provider.run(args.COMMAND)
+    elif sys.argv[1] == core_commands_provider.root():
+        core_commands_provider.run(args.COMMAND)
     else:
         raise ValueError("Unexpected argument.")
 
 else:
-    if sys.argv[1] not in custom_commands:
+    if not custom_commands_provider.supports(sys.argv[1]):
         print(f"{Fore.RED}Command not found... but you can create it!{Style.RESET_ALL}")
         sys.exit(0)
 
-    custom_command = custom_commands[sys.argv[1]]
-    command_file = custom_command.command
+    custom_command = custom_commands_provider.get_command(sys.argv[1])
+    command_file = custom_command.cmd
     service = custom_command.service
     custom_command_name = custom_command.name
 
