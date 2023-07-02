@@ -37,8 +37,8 @@ def __templates_in_path(path_to_parent) -> Generator[CustomTemplate, None, None]
 def initialize(config_manager: ConfigManager):
     """ Function initializing new project. """
     if os.listdir(config_manager.paths.project_config):
-        print(f"{Fore.LIGHTRED_EX}\".drake\" directory already exists in the project and is not "
-              f"empty. If you want to initialize the project again, delete it.{Style.RESET_ALL}")
+        print(f"{Fore.LIGHTRED_EX}\".drake\" directory is not empty. "
+              f"If you want to initialize the project again, delete it.{Style.RESET_ALL}")
         sys.exit(1)
 
     project_id = input(f"{Fore.LIGHTBLUE_EX}Enter project id: {Style.RESET_ALL}")

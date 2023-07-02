@@ -19,7 +19,7 @@ config_manager = ConfigManager()
 process_executor = ProcessExecutor(config_manager)
 
 if config_manager.has_project_switched():
-    print("Switching projects.")
+    print("Switching context.")
     process_executor.env_freeze()
     sys.exit(100)
 

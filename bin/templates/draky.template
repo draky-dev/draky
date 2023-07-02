@@ -16,13 +16,7 @@ COLOR_RESET='\033[0m'
 #COLOR_WHITE='\033[0;97m'
 COLOR_RED='\033[0;91m'
 
-if [ "$(uname -s | cut -c 1-5)" == "Linux" ]; then
-  DRAKY_HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
-else
-  DRAKY_HOST_IP=host.docker.internal
-fi
-
-export DRAKY_HOST_IP
+DRAKY_HOST_IP=$(docker network inspect bridge -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}')
 
 find_project_config_path() {
   if [ "$PWD" = / ]; then
@@ -121,7 +115,7 @@ execute_core() {
 init_environment() {
   if [ -z "$PROJECT_CONFIG_PATH" ]; then
     destroy_core
-    mkdir "$PROJECT_CONFIG_DIR"
+    mkdir -p "$PROJECT_CONFIG_DIR"
     PROJECT_CONFIG_PATH="$PWD/$PROJECT_CONFIG_DIR"
     PROJECT_ROOT="$PROJECT_CONFIG_PATH/.."
     execute_core "$@"
