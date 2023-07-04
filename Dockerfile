@@ -13,9 +13,7 @@ RUN apk add --no-cache \
     python3 \
     py3-dotenv \
     py3-yaml \
-    py3-colorama \
-    py3-pylint \
-    py3-pytest
+    py3-colorama
 
 VOLUME '/global-config' '/opt/dk-core'
 

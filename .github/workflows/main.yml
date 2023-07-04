@@ -3,10 +3,12 @@ on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 env:
-  IMAGE_PATH: 'dist/draky-local-build.image.tar'
+  DRAKY_IMAGE_PATH: 'dist/draky-local-build.image.tar'
   DRAKY_IMAGE_ARTIFACT_NAME: 'draky-image'
 jobs:
+
   build:
+    name: Building draky.
     runs-on: ubuntu-latest
     container:
       image: docker:24.0.2-cli-alpine3.18
@@ -23,9 +25,11 @@ jobs:
         uses: actions/upload-artifact@v3.1.2
         with:
           name: ${{ env.DRAKY_IMAGE_ARTIFACT_NAME }}
-          path: ${{ env.IMAGE_PATH }}
+          path: ${{ env.DRAKY_IMAGE_PATH }}
           retention-days: 1
-  test:
+
+  test-core:
+    name: Testing draky-core.
     runs-on: ubuntu-latest
     container: docker:24.0.2-cli-alpine3.18
     needs: [build]
@@ -40,6 +44,46 @@ jobs:
         name: ${{ env.DRAKY_IMAGE_ARTIFACT_NAME }}
         path: dist
     - name: Loading image.
-      run: docker load --input $IMAGE_PATH
-    - name: Testing.
-      run: make test
+      run: docker load --input $DRAKY_IMAGE_PATH
+    - name: Testing core.
+      run: make test-core
+
+  test-functional:
+    name: Testing functional.
+    runs-on: ubuntu-latest
+    container: docker:24.0.2-cli-alpine3.18
+    needs: [build]
+    steps:
+    - name: checkout repo
+      uses: actions/checkout@v3.5.3
+    - name: Installing basic dependencies.
+      run: apk add make
+    - name: Retrieve saved Docker image
+      uses: actions/download-artifact@v3.0.2
+      with:
+        name: ${{ env.DRAKY_IMAGE_ARTIFACT_NAME }}
+        path: dist
+    - name: Loading image.
+      run: docker load --input $DRAKY_IMAGE_PATH
+    - name: Testing core.
+      run: make test-functional
+
+  test-lint:
+    name: Testing linting.
+    runs-on: ubuntu-latest
+    container: docker:24.0.2-cli-alpine3.18
+    needs: [build]
+    steps:
+    - name: checkout repo
+      uses: actions/checkout@v3.5.3
+    - name: Installing basic dependencies.
+      run: apk add make
+    - name: Retrieve saved Docker image
+      uses: actions/download-artifact@v3.0.2
+      with:
+        name: ${{ env.DRAKY_IMAGE_ARTIFACT_NAME }}
+        path: dist
+    - name: Loading image.
+      run: docker load --input $DRAKY_IMAGE_PATH
+    - name: Testing core.
+      run: make test-lint

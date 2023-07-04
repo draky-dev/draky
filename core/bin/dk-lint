@@ -5,7 +5,7 @@ ROOT="${CWD}/.."
 
 EXIT_CODE=0
 
-cd "${ROOT}"
+cd "${ROOT}" || exit 1
 
 # We want to do the cleanup even if pylint will return non-zero error code.
 pylint --rcfile="${ROOT}/pylintrc" "${ROOT}/dk" || EXIT_CODE=$?
