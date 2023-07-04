@@ -5,7 +5,7 @@ ifndef VERSION
 	override VERSION = local-build
 endif
 
-ROOT = $(shell pwd -P)
+ROOT = $(shell cd -P -- "$(dirname -- "$0")" && pwd -P)
 
 CORE_PATH = ${ROOT}/core
 CORE_BIN_PATH = ${CORE_PATH}/bin
