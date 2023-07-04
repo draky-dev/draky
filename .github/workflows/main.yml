@@ -2,6 +2,7 @@ name: Build
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
+  packages: read
 env:
   DRAKY_IMAGE_PATH: 'dist/draky-local-build.image.tar'
   DRAKY_IMAGE_ARTIFACT_NAME: 'draky-image'
