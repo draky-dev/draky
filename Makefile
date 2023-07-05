@@ -5,7 +5,7 @@ ifndef VERSION
 	override VERSION = local-build
 endif
 
-ROOT = $(shell cd -P -- "$(dirname -- "$0")" && pwd -P)
+ROOT = $(shell pwd -P)
 
 CORE_PATH = ${ROOT}/core
 CORE_BIN_PATH = ${CORE_PATH}/bin
@@ -23,6 +23,7 @@ TEST_CONTAINER_DRAKY_SOURCE_PATH = /opt/${SHORT_NAME}
 
 .ONESHELL:
 .PHONY: $(MAKECMDGOALS)
+SHELL = /bin/bash
 
 install_build_dependencies_alpine:
 	apk add bash gettext
@@ -36,9 +37,11 @@ build:
 	find ${DIST_BIN_PATH} -type f -exec chmod 755 {} \;
 
 build-test:
-	docker buildx build -f ${ROOT}/tests/Dockerfile --rm -t ${TEST_ENVIRONMENT_IMAGE} .
+	cd ${ROOT}/tests
+	docker buildx build -f ./Dockerfile --rm -t ${TEST_ENVIRONMENT_IMAGE} .
 
 test-core:
+	ls -la .
 	docker run \
 	--name ${TEST_CONTAINER_NAME} \
 	-t \

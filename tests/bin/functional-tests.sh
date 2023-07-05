@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 CWD="$(cd -P -- "$(dirname -- "$0")" && pwd -P)"
 DRAKY_SOURCE_PATH=${DRAKY_SOURCE_PATH-"$CWD/../.."}

@@ -6,20 +6,22 @@ permissions:
 env:
   DRAKY_IMAGE_PATH: 'dist/draky-local-build.image.tar'
   DRAKY_IMAGE_ARTIFACT_NAME: 'draky-image'
+  DRAKY_DRAKY_PATH: dist/bin/draky
+  DRAKY_DRAKY_ARTIFACT_NAME: 'draky'
 jobs:
 
   build:
     name: Building draky.
     runs-on: ubuntu-latest
     container:
-      image: docker:24.0.2-cli-alpine3.18
+      image: docker:24.0.2-dind-alpine3.18
     steps:
       - name: checkout repo
         uses: actions/checkout@v3.5.3
       - name: Installing basic dependencies.
-        run: apk add make
+        run: apk add make bash
       - name: Install other dependencies.
-        run: make install_build_dependencies_apk
+        run: make install_build_dependencies_alpine
       - name: Building.
         run: make build
       - name: Preserve image
@@ -28,17 +30,22 @@ jobs:
           name: ${{ env.DRAKY_IMAGE_ARTIFACT_NAME }}
           path: ${{ env.DRAKY_IMAGE_PATH }}
           retention-days: 1
+      - name: Preserve draky
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: ${{ env.DRAKY_DRAKY_ARTIFACT_NAME }}
+          path: ${{ env.DRAKY_DRAKY_PATH }}
+          retention-days: 1
 
   test-core:
     name: Testing draky-core.
     runs-on: ubuntu-latest
-    container: docker:24.0.2-cli-alpine3.18
     needs: [build]
     steps:
     - name: checkout repo
       uses: actions/checkout@v3.5.3
     - name: Installing basic dependencies.
-      run: apk add make
+      run: sudo apt install make
     - name: Retrieve saved Docker image
       uses: actions/download-artifact@v3.0.2
       with:
@@ -52,33 +59,39 @@ jobs:
   test-functional:
     name: Testing functional.
     runs-on: ubuntu-latest
-    container: docker:24.0.2-cli-alpine3.18
     needs: [build]
     steps:
     - name: checkout repo
       uses: actions/checkout@v3.5.3
     - name: Installing basic dependencies.
-      run: apk add make
+      run: sudo apt install make
     - name: Retrieve saved Docker image
       uses: actions/download-artifact@v3.0.2
       with:
         name: ${{ env.DRAKY_IMAGE_ARTIFACT_NAME }}
         path: dist
+    - name: Retrieve saved draky script
+      uses: actions/download-artifact@v3.0.2
+      with:
+        name: ${{ env.DRAKY_DRAKY_ARTIFACT_NAME}}
+        path: dist/bin
+    - name: Making sure that draky script is executable.
+      run: chmod u+x ${{ env.DRAKY_DRAKY_PATH }}
     - name: Loading image.
       run: docker load --input $DRAKY_IMAGE_PATH
-    - name: Testing core.
+    - name: Running functional tests.
       run: make test-functional
+
 
   test-lint:
     name: Testing linting.
     runs-on: ubuntu-latest
-    container: docker:24.0.2-cli-alpine3.18
     needs: [build]
     steps:
     - name: checkout repo
       uses: actions/checkout@v3.5.3
     - name: Installing basic dependencies.
-      run: apk add make
+      run: sudo apt install make
     - name: Retrieve saved Docker image
       uses: actions/download-artifact@v3.0.2
       with:
@@ -86,5 +99,5 @@ jobs:
         path: dist
     - name: Loading image.
       run: docker load --input $DRAKY_IMAGE_PATH
-    - name: Testing core.
-      run: make test-lint
+    - name: Running linter.
+      run: sudo make test-lint
