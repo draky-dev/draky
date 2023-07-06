@@ -12,9 +12,13 @@ teardown() {
   rm -r "${TEST_ENV_PATH}"
 }
 
+_initialize_test_environment() {
+  cd "${TEST_ENV_PATH}" || exit 1
+  printf "test-project\n0\n" | ${DRAKY} env init
+}
+
 @test "Environment initialization test (default template)" {
-  cd "${TEST_ENV_PATH}"
-  printf "test-project\n" | ${DRAKY} env init
+  _initialize_test_environment
   [ -d "${TEST_ENV_PATH}/.draky" ]
 }
 
@@ -27,4 +31,12 @@ teardown() {
   cd "$TEST_ENV_PATH"
   printf "test-project\n1\n" | ${DRAKY} env init
   [ -f "${TEST_ENV_PATH}/.draky/${TEST_TEMPLATE_FILE}" ]
+}
+
+@test "Context changing" {
+  _initialize_test_environment
+  cd /
+  run ${DRAKY} -h
+  [[ "$output" == *"Leaving the context: '${TEST_ENV_PATH}/.draky'"* ]]
+  [[ "$output" == *"Entering the context: 'None'."* ]]
 }

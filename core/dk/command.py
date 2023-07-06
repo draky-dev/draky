@@ -16,10 +16,7 @@ class EmptyCommand:
 class CallableCommand(EmptyCommand):
     """Dataclass representing a command.
     """
-    callback: Callable[[], None]|None
-
-    def __call__(self, *args, **kwargs):
-        self.callback()
+    callback: Callable[[list], None]|None
 
 
 @dataclass

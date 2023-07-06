@@ -10,9 +10,10 @@ class CallableCommandsProvider(ABC):
     """Provides and executes commands.
     """
 
-    _commands: list[CallableCommand] = []
+    def __init__(self):
+        self._commands: list[CallableCommand] = []
 
-    def run(self, command_name: str):
+    def run(self, command_name: str, reminder_args: list[str]):
         """Run command.
         """
         if not self.supports(command_name):
@@ -20,7 +21,7 @@ class CallableCommandsProvider(ABC):
 
         command = self.get_command(command_name)
         if command.callback:
-            command.callback()
+            command.callback(reminder_args)
 
     def get_commands(self) -> list[CallableCommand]:
         """Returns the supported commands.
@@ -30,7 +31,7 @@ class CallableCommandsProvider(ABC):
     def supports(self, command_name: str) -> bool:
         """Returns the information if given command is supported.
         """
-        for command in self._commands:
+        for command in self.get_commands():
             if command.name == command_name:
                 return True
         return False
@@ -38,7 +39,7 @@ class CallableCommandsProvider(ABC):
     def get_command(self, command_name: str) -> CallableCommand:
         """Returns the command.
         """
-        for command in self._commands:
+        for command in self.get_commands():
             if command.name == command_name:
                 return command
         raise ValueError("Unsupported command.")

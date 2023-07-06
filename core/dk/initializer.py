@@ -36,14 +36,17 @@ def __templates_in_path(path_to_parent) -> Generator[CustomTemplate, None, None]
 
 def initialize(config_manager: ConfigManager):
     """ Function initializing new project. """
-    if os.listdir(config_manager.paths.project_config):
+
+    project_config_path: str = config_manager.get_new_project_config_path()
+
+    if os.listdir(project_config_path):
         print(f"{Fore.LIGHTRED_EX}\".drake\" directory is not empty. "
               f"If you want to initialize the project again, delete it.{Style.RESET_ALL}")
         sys.exit(1)
 
     project_id = input(f"{Fore.LIGHTBLUE_EX}Enter project id: {Style.RESET_ALL}")
-    custom_templates_root_path: str = f"{config_manager.paths.global_config}/templates"
-    default_template = Template('default', config_manager.paths.default_template)
+    custom_templates_root_path: str = f"{config_manager.global_config_path}/templates"
+    default_template = Template('default', config_manager.default_template_path)
 
     custom_templates: list[Template] = []
     if os.path.exists(custom_templates_root_path):
@@ -65,14 +68,18 @@ def initialize(config_manager: ConfigManager):
         print(f"{Style.RESET_ALL}")
         chosen_template_number =\
             input(f"{Fore.LIGHTBLUE_EX}Enter template number: {Style.RESET_ALL}")
-        chosen_template = available_templates_map[str(chosen_template_number)]
+        chosen_template = available_templates_map[chosen_template_number]
 
     chosen_template_path_draky = f"{chosen_template.path}/.draky"
     shutil.copytree(
-        chosen_template_path_draky, config_manager.paths.project_config, dirs_exist_ok=True
+        chosen_template_path_draky,
+        project_config_path,
+        dirs_exist_ok=True
     )
 
-    with open(config_manager.paths.project_config + "/core.dk.env", "x", encoding='utf8') as file:
+    with open(
+            project_config_path + "/core.dk.env", "x", encoding='utf8'
+    ) as file:
         file.write(f"# Do not manually edit this file. It's managed by Draky.\n"
                    f"DRAKY_PROJECT_ID=\"{project_id}\"\n"
                    f"DRAKY_ENVIRONMENT=\"dev\"")

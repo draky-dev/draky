@@ -10,9 +10,6 @@ from dk.command import CallableCommand, EmptyCommand
 class ArgsParser:
     """Arguments Parser
     """
-    main_parser = None
-    commands_parsers = None
-    first_level_commands = ['-h', '-v', '--version']
 
     def __init__(self, version:str=None):
         args_parser = argparse.ArgumentParser(prog="dk")
@@ -21,6 +18,7 @@ class ArgsParser:
 
         args_subparsers = args_parser.add_subparsers(dest='COMMAND')
         self.commands_parsers = args_subparsers
+        self.first_level_commands = ['-h', '-v', '--version']
 
     def register_argument_group(self, name: str, help_text: str, commands: list[CallableCommand]):
         """Register argument group.

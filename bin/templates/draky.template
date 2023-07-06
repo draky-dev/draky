@@ -41,20 +41,25 @@ fi
 start_core() {
   if ! docker container inspect ${CONTAINER_NAME} &> /dev/null; then
 
-    ARGS=(
+    local ARGS=(
       --name "$CONTAINER_NAME"
       --group-add="$DRAKY_GID"
       -v /var/run/docker.sock:/var/run/docker.sock
-      -v "$PROJECT_CONFIG_PATH:$PROJECT_CONFIG_PATH"
       -v "$HOST_GLOBAL_CONFIG_PATH:$CORE_GLOBAL_CONFIG_PATH"
       -e "DRAKY_VERSION=$DRAKY_VERSION"
-      -e "DRAKY_PROJECT_CONFIG_ROOT=$PROJECT_CONFIG_PATH"
       -e "DRAKY_GLOBAL_CONFIG_ROOT=$CORE_GLOBAL_CONFIG_PATH"
-      -e "DRAKY_PROJECT_ROOT=$PROJECT_ROOT"
       -e "DRAKY_HOST_UID=$DRAKY_HOST_UID"
       -e "DRAKY_HOST_GID=$DRAKY_HOST_GID"
       -e "DRAKY_HOST_IP=$DRAKY_HOST_IP"
     )
+
+    if [[ "$PROJECT_CONFIG_PATH" ]]; then
+      ARGS+=(
+        -v "$PROJECT_CONFIG_PATH:$PROJECT_CONFIG_PATH"
+        -e "DRAKY_PROJECT_CONFIG_ROOT=$PROJECT_CONFIG_PATH"
+        -e "DRAKY_PROJECT_ROOT=$PROJECT_ROOT"
+      )
+    fi
 
     if [[ $DRAKY_MOUNT_CORE ]]; then
         ARGS+=(-v "$DRAKY_MOUNT_CORE:/opt/dk-core")
@@ -81,60 +86,49 @@ destroy_core() {
 execute_core() {
   start_core
 
-  # This is required otherwise COLUMNS will be empty here, as this value is not inherited.
-  COLUMNS=$(tput cols)
-  export COLUMNS
-
-  ARGS=(
+  local ARGS=(
     -i
     --user="$DRAKY_HOST_UID:$DRAKY_HOST_GID"
-    -e "DRAKY_PROJECT_CONFIG_CURRENT_ROOT=$PROJECT_CONFIG_PATH"
-    -e "COLUMNS=$COLUMNS"
+    # This is required otherwise COLUMNS will be empty here, as this value is not inherited.
+    -e "COLUMNS=$(tput cols)"
   )
 
   # If we are not sending anything through stdin, we can allocate a pseudo-tty.
   if [ -t 0 ]; then
-      ARGS+=(-t)
+    ARGS+=(-t)
+  fi
+
+  local CURRENT_CONFIG_PATH
+  # We attach /dev/null to stdin just so it won't get used up, and will be still available for the main "exec" command.
+  CURRENT_CONFIG_PATH="$(docker exec --user="$DRAKY_HOST_UID:$DRAKY_HOST_GID" "${CONTAINER_NAME}" dk-core core internal get-project-path < /dev/null)"
+
+  if [[ "$PROJECT_CONFIG_PATH" != "$CURRENT_CONFIG_PATH" ]]; then
+    echo "Leaving the context: '${CURRENT_CONFIG_PATH:-None}'."
+    destroy_core
+    echo "Entering the context: '${PROJECT_CONFIG_PATH:-None}'."
+    start_core
   fi
 
   docker exec "${ARGS[@]}" "${CONTAINER_NAME}" dk-core "$@" < /dev/stdin
-
-  local EXIT_CODE="$?"
-
-  if [ "$EXIT_CODE" -eq 100 ]; then
-    destroy_core
-    execute_core "$@"
-    exit 0
-  elif [ "$EXIT_CODE" -eq 0 ]; then
-    exit 0
-  else
-    exit "$EXIT_CODE"
-  fi
+  exit "$?"
 }
 
 init_environment() {
-  if [ -z "$PROJECT_CONFIG_PATH" ]; then
     destroy_core
     mkdir -p "$PROJECT_CONFIG_DIR"
     PROJECT_CONFIG_PATH="$PWD/$PROJECT_CONFIG_DIR"
     PROJECT_ROOT="$PROJECT_CONFIG_PATH/.."
     execute_core "$@"
-    else
-    echo -e "$COLOR_RED\"$PROJECT_CONFIG_DIR\" directory already exists in the project. Delete it if you want to initialize the environment again.$COLOR_RESET"
-    exit 1
-  fi
 }
 
 PROJECT_CONFIG_PATH="$(find_project_config_path "$PROJECT_CONFIG_DIR")"
 
 if [ "$1" == "env" ] && [ "$2" == "init" ]; then
+  if [ -n "$PROJECT_CONFIG_PATH" ]; then
+    echo -e "$COLOR_RED\"$PROJECT_CONFIG_DIR\" directory already exists in the project. Delete it if you want to initialize the environment again.$COLOR_RESET"
+    exit 1
+  fi
   init_environment "$@"
-  exit 0
-fi
-
-if [ -z "$PROJECT_CONFIG_PATH" ]; then
-  echo -e "${COLOR_RED}Project configuration could not be found${COLOR_RESET}"
-  exit 1
 fi
 
 PROJECT_ROOT="$PROJECT_CONFIG_PATH/.."

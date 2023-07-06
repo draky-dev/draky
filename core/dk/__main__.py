@@ -18,11 +18,6 @@ config_manager = ConfigManager()
 
 process_executor = ProcessExecutor(config_manager)
 
-if config_manager.has_project_switched():
-    print("Switching context.")
-    process_executor.env_freeze()
-    sys.exit(100)
-
 # If we are initializing, we need to complete initialization before running anything else, as
 # therwise config manager won't have enough data.
 try:
@@ -33,13 +28,17 @@ except IndexError:
 
 args_parser = ArgsParser(version=config_manager.version)
 
-env_commands_provider = EnvCommandsProvider(process_executor)
+env_commands_provider = EnvCommandsProvider(process_executor, config_manager.is_project_context())
 args_parser.register_argument_group(
-    'env', 'Commands for environment management.', env_commands_provider.get_commands()
+    env_commands_provider.root(),
+    'Commands for environment management.',
+    env_commands_provider.get_commands()
 )
-core_commands_provider = CoreCommandsProvider(process_executor)
+core_commands_provider = CoreCommandsProvider(config_manager)
 args_parser.register_argument_group(
-    'core', 'Commands for core management.', core_commands_provider.get_commands()
+    core_commands_provider.root(),
+    'Commands for core management.',
+    core_commands_provider.get_commands()
 )
 
 custom_commands_provider = CustomCommandsProvider(config_manager)
@@ -57,16 +56,16 @@ if args_parser.has_first_level_command(sys.argv[1]):
     args = args_parser.parse()
     if sys.argv[1] == env_commands_provider.root():
         # Find all environments.
-        available_environments = next(os.walk(config_manager.paths.environments))[1]
+        available_environments = next(os.walk(config_manager.get_project_paths().environments))[1]
         if config_manager.get_env() not in available_environments:
             print(
                 f"Environment '{config_manager.get_env()}' has not been found in"
-                f" '{config_manager.paths.environments}'."
+                f" '{config_manager.get_project_paths().environments}'."
             )
             sys.exit(1)
-        env_commands_provider.run(args.COMMAND)
+        env_commands_provider.run(args.COMMAND, sys.argv[3:])
     elif sys.argv[1] == core_commands_provider.root():
-        core_commands_provider.run(args.COMMAND)
+        core_commands_provider.run(args.COMMAND, sys.argv[3:])
     else:
         raise ValueError("Unexpected argument.")
 

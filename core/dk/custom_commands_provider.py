@@ -12,10 +12,8 @@ class CustomCommandsProvider:
     """Provider of the custom commands.
     """
 
-    config_manager: ConfigManager
-
     def __init__(self, config_manager: ConfigManager):
-        self.config_manager = config_manager
+        self.config_manager: ConfigManager = config_manager
 
     def supports(self, command_name: str) -> bool:
         """Returns the information if given command is supported.
@@ -41,9 +39,13 @@ class CustomCommandsProvider:
         raise ValueError("Unsupported command.")
 
     def __gather_custom_commands(self) -> list[ServiceCommand]:
+
+        if not self.config_manager.is_project_context():
+            return []
+
         command_files = find_files_weighted_by_path("*.dk.sh", {
-            self.config_manager.paths.commands: 10,
-        }, self.config_manager.paths.project_config)
+            self.config_manager.get_project_paths().commands: 10,
+        }, self.config_manager.get_project_paths().project_config)
 
         custom_commands = []
         for path, filename in command_files:

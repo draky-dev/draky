@@ -41,7 +41,6 @@ build-test:
 	docker buildx build -f ./Dockerfile --rm -t ${TEST_ENVIRONMENT_IMAGE} .
 
 test-core:
-	ls -la .
 	docker run \
 	--name ${TEST_CONTAINER_NAME} \
 	-t \
@@ -52,8 +51,8 @@ test-core:
 
 test-functional:
 	function tearDown() { \
-		docker stop ${TEST_CONTAINER_NAME}; \
-		docker rm ${TEST_CONTAINER_NAME}; \
+		docker stop ${TEST_CONTAINER_NAME} > /dev/null; \
+		docker rm ${TEST_CONTAINER_NAME} > /dev/null; \
 	}
 	trap tearDown EXIT
 	docker run \

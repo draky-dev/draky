@@ -12,12 +12,10 @@ from dk.utils import get_path_up_to_project_root
 class ProcessExecutor:
     """Class handling execution of system processes.
     """
-    config: ConfigManager
-
-    stdin_passed: bool = False
 
     def __init__(self, config: ConfigManager) -> None:
-        self.config = config
+        self.config: ConfigManager = config
+        self.stdin_passed: bool = False
 
     def get_command_base(self) -> list:
         """Returns beginning of every command.
@@ -30,7 +28,8 @@ class ProcessExecutor:
             '-p',
             f"{self.config.get_project_id()}",
             '-f',
-            f"{self.config.paths.environments}/{self.config.get_env()}/docker-compose.yml"
+            f"{self.config.get_project_paths().environments}/{self.config.get_env()}/"
+            f"docker-compose.yml"
         ]
 
     def env_start(self) -> None:
