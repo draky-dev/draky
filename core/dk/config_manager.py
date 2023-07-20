@@ -3,7 +3,7 @@
 import os
 import io
 from dataclasses import dataclass
-from pathlib import Path
+import yaml
 from dotenv import dotenv_values
 
 from dk.utils import find_files_weighted_by_filename
@@ -48,6 +48,10 @@ class ConfigManager:
 
         if 'DRAKY_PROJECT_CONFIG_ROOT' not in os.environ:
             return
+
+        # Set helper env variables.
+        os.environ['DRAKY_PATH_HELPERS'] = f"{os.environ['DRAKY_PROJECT_CONFIG_ROOT']}/helpers"
+
         # We intentionally keep the same project config path as on host. That way docker-compose
         # inside the container won't complain that docker-compose.yml file doesn't exist.
         project_config_path = os.environ['DRAKY_PROJECT_CONFIG_ROOT']
@@ -71,11 +75,6 @@ class ConfigManager:
             if 'DRAKY_PROJECT_ID' in self.__project_data.vars else None
         self.__project_data.env = self.__project_data.vars['DRAKY_ENVIRONMENT']\
             if 'DRAKY_ENVIRONMENT' in self.__project_data.vars else None
-
-        # Add all existing variables that starts with the prefix to the dictionary.
-        self.__project_data.vars.update(
-            {k: v for k, v in os.environ.items() if k.startswith(self.__draky_prefix)}
-        )
 
     def get_project_paths(self) -> ProjectPaths:
         """Returns object storing project paths.
@@ -131,18 +130,34 @@ class ConfigManager:
         return self.__project_data.vars
 
     def __load_variables(self) -> None:
-        files = find_files_weighted_by_filename("*dk.env", {
-            'core.dk.env': -10,
-            'local.dk.env': 10,
+        files = find_files_weighted_by_filename("*dk.yml", {
+            'core.dk.yml': -10,
+            'local.dk.yml': 10,
         # Note that we are accessing paths directly, because at this point project context is not
         # determined yet.
         }, self.__project_data.paths.project_config)
-        vars_list: list = []
-        files_content_list: list[str] = []
+
+        env_content_list: list[str] = []
+
+        # Add all existing variables that starts with the prefix to the dictionary.
+        env_content_list.append(self.__dict_into_env(
+            {k: v for k, v in os.environ.items() if k.startswith(self.__draky_prefix)}
+        ))
+
         for path, filename in files:
             path_full = path + '/' + filename
-            files_content_list.append(Path(path_full).read_text(encoding='utf8'))
+            with open(path_full, 'r', encoding='utf8') as stream:
+                file_content = yaml.safe_load(stream)
+                if 'variables' in file_content:
+                    variables = file_content['variables']
+                    env_content_list.append(self.__dict_into_env(variables))
 
-            # We are loading env variables to resolve references.
-            vars_list = vars_list + list(set(dotenv_values(path_full).keys()) - set(vars_list))
-        self.__project_data.vars = dotenv_values(stream=io.StringIO("\n".join(files_content_list)))
+        self.__project_data.vars = dotenv_values(stream=io.StringIO("\n".join(env_content_list)))
+
+    def __dict_into_env(self, dictionary: dict[str, str]) -> str:
+        """Converts the given dictionary into the env string.
+        """
+        output: str = ''
+        for key, value in dictionary.items():
+            output += f"{key}={value}\n"
+        return output

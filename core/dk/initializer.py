@@ -78,11 +78,12 @@ def initialize(config_manager: ConfigManager):
     )
 
     with open(
-            project_config_path + "/core.dk.env", "x", encoding='utf8'
+        project_config_path + "/core.dk.yml", "x", encoding='utf8'
     ) as file:
         file.write(f"# Do not manually edit this file. It's managed by Draky.\n"
-                   f"DRAKY_PROJECT_ID=\"{project_id}\"\n"
-                   f"DRAKY_ENVIRONMENT=\"dev\"")
+                   f"variables:\n"
+                   f"    DRAKY_PROJECT_ID: {project_id}\n"
+                   f"    DRAKY_ENVIRONMENT: dev\n")
         file.close()
 
     print(f"{Fore.GREEN}Project has been initialized.{Style.RESET_ALL}")

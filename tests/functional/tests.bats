@@ -33,7 +33,7 @@ _initialize_test_environment() {
   [ -f "${TEST_ENV_PATH}/.draky/${TEST_TEMPLATE_FILE}" ]
 }
 
-@test "Context changing" {
+@test "Context switching" {
   _initialize_test_environment
   cd /
   run ${DRAKY} -h
