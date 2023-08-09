@@ -17,12 +17,12 @@ _initialize_test_environment() {
   printf "test-project\n0\n" | ${DRAKY} env init
 }
 
-@test "Environment initialization test (default template)" {
+@test "Environment initialization (default template)" {
   _initialize_test_environment
   [ -d "${TEST_ENV_PATH}/.draky" ]
 }
 
-@test "Environment initialization test (custom template)" {
+@test "Environment initialization (custom template)" {
   TEST_TEMPLATE_PATH=/root/.draky/templates/test-template/.draky
   TEST_TEMPLATE_FILE=test-template-file
   TEST_TEMPLATE_FILE_PATH=${TEST_TEMPLATE_PATH}/${TEST_TEMPLATE_FILE}
@@ -39,4 +39,31 @@ _initialize_test_environment() {
   run ${DRAKY} -h
   [[ "$output" == *"Leaving the context: '${TEST_ENV_PATH}/.draky'"* ]]
   [[ "$output" == *"Entering the context: 'None'."* ]]
+}
+
+@test "Built-in commands default help" {
+
+  testDefaultHelp() {
+    run "$@"
+    [[ "$output" == *"show this help message and exit"* ]]
+  }
+
+  testDefaultHelp "${DRAKY}" core
+  testDefaultHelp "${DRAKY}" core debug
+  testDefaultHelp "${DRAKY}" env
+}
+
+@test "Core vars" {
+
+  run "${DRAKY}" core debug vars
+
+  [[ "$output" == *"DRAKY_VERSION"* ]]
+  [[ "$output" == *"DRAKY_HOST_UID"* ]]
+  [[ "$output" == *"DRAKY_HOST_GID"* ]]
+  [[ "$output" == *"DRAKY_PROJECT_CONFIG_ROOT"* ]]
+  [[ "$output" == *"DRAKY_PROJECT_ROOT"* ]]
+  [[ "$output" == *"DRAKY_HOST_IP"* ]]
+  [[ "$output" == *"DRAKY_PATH_HELPERS"* ]]
+  [[ "$output" == *"DRAKY_PROJECT_ID"* ]]
+  [[ "$output" == *"DRAKY_ENVIRONMENT"* ]]
 }

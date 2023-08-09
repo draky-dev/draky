@@ -28,18 +28,25 @@ except IndexError:
 
 args_parser = ArgsParser(version=config_manager.version)
 
-env_commands_provider = EnvCommandsProvider(process_executor, config_manager.is_project_context())
-args_parser.register_argument_group(
-    env_commands_provider.root(),
-    'Commands for environment management.',
-    env_commands_provider.get_commands()
+def display_help(arguments=None):
+    """Callback displaying help for given arguments.
+    """
+    if arguments is None:
+        arguments = []
+    args_parser.parse(arguments + ['-h'])
+
+env_commands_provider = EnvCommandsProvider(
+    process_executor,
+    config_manager.is_project_context(),
+    display_help,
 )
-core_commands_provider = CoreCommandsProvider(config_manager)
-args_parser.register_argument_group(
-    core_commands_provider.root(),
-    'Commands for core management.',
-    core_commands_provider.get_commands()
+args_parser.add_command_group(env_commands_provider)
+
+core_commands_provider = CoreCommandsProvider(
+    config_manager,
+    display_help,
 )
+args_parser.add_command_group(core_commands_provider)
 
 custom_commands_provider = CustomCommandsProvider(config_manager)
 
@@ -48,13 +55,15 @@ args_parser.add_commands(custom_commands_provider.get_commands())
 
 # Display help by default.
 if len(sys.argv) == 1:
-    args_parser.parse(['-h'])
+    display_help()
 
 # Only use args_parser for the "env" and "-h" commands. For other commands, pass all arguments
 # directly to proper scripts. We are not validating them.
-if args_parser.has_first_level_command(sys.argv[1]):
+if args_parser.has_command(sys.argv[1]):
     args = args_parser.parse()
-    if sys.argv[1] == env_commands_provider.root():
+    if not vars(args)[args.COMMAND]:
+        args_parser.parse([args.COMMAND, '-h'])
+    if sys.argv[1] == env_commands_provider.name():
         # Find all environments.
         available_environments = next(os.walk(config_manager.get_project_paths().environments))[1]
         if config_manager.get_env() not in available_environments:
@@ -63,12 +72,11 @@ if args_parser.has_first_level_command(sys.argv[1]):
                 f" '{config_manager.get_project_paths().environments}'."
             )
             sys.exit(1)
-        env_commands_provider.run(args.COMMAND, sys.argv[3:])
-    elif sys.argv[1] == core_commands_provider.root():
-        core_commands_provider.run(args.COMMAND, sys.argv[3:])
+        env_commands_provider.run(sys.argv[2], sys.argv[4:], sys.argv[1:2])
+    elif sys.argv[1] == core_commands_provider.name():
+        core_commands_provider.run(sys.argv[2], sys.argv[3:], sys.argv[1:2])
     else:
         raise ValueError("Unexpected argument.")
-
 else:
     if not custom_commands_provider.supports(sys.argv[1]):
         print(f"{Fore.RED}Command not found... but you can create it!{Style.RESET_ALL}")

@@ -139,7 +139,7 @@ class ConfigManager:
 
         env_content_list: list[str] = []
 
-        # Add all existing variables that starts with the prefix to the dictionary.
+        # Add to the dictionary all existing variables that start with the prefix.
         env_content_list.append(self.__dict_into_env(
             {k: v for k, v in os.environ.items() if k.startswith(self.__draky_prefix)}
         ))
