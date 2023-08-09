@@ -54,7 +54,7 @@ _initialize_test_environment() {
 }
 
 @test "Core vars" {
-
+  _initialize_test_environment
   run "${DRAKY}" core debug vars
 
   [[ "$output" == *"DRAKY_VERSION"* ]]
