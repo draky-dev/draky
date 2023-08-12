@@ -50,7 +50,7 @@ class ConfigManager:
             return
 
         # Set helper env variables.
-        os.environ['DRAKY_PATH_HELPERS'] = f"{os.environ['DRAKY_PROJECT_CONFIG_ROOT']}/helpers"
+        os.environ['DRAKY_PATH_ADDONS'] = f"{os.environ['DRAKY_PROJECT_CONFIG_ROOT']}/addons"
 
         # We intentionally keep the same project config path as on host. That way docker-compose
         # inside the container won't complain that docker-compose.yml file doesn't exist.
