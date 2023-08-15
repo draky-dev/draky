@@ -67,3 +67,66 @@ _initialize_test_environment() {
   [[ "$output" == *"DRAKY_PROJECT_ID"* ]]
   [[ "$output" == *"DRAKY_ENVIRONMENT"* ]]
 }
+
+@test "Custom vars" {
+  _initialize_test_environment
+  cat > $TEST_ENV_PATH/.draky/test.dk.yml << EOF
+variables:
+  TEST_VAR: test1
+EOF
+  run ${DRAKY} core debug vars
+  [[ "$output" == *"TEST_VAR"* ]]
+  [[ "$output" == *"test1"* ]]
+}
+
+@test "Vars priorities" {
+  _initialize_test_environment
+  createConfigFile() {
+    cat > "$TEST_ENV_PATH/.draky/${1}.dk.yml" << EOF
+priority: ${3}
+variables:
+  TEST_VAR: ${2}
+EOF
+  }
+  createConfigFile test1 test1 0
+  createConfigFile test2 test2 10
+  run ${DRAKY} core debug vars
+  [[ "$output" == *"TEST_VAR"* ]]
+  [[ "$output" == *"test2"* ]]
+  createConfigFile test1 test1 10
+  createConfigFile test2 test2 0
+  run ${DRAKY} core debug vars
+  [[ "$output" == *"TEST_VAR"* ]]
+  [[ "$output" == *"test1"* ]]
+}
+
+@test "Vars default priority" {
+  _initialize_test_environment
+  createConfigFile() {
+    cat > "$TEST_ENV_PATH/.draky/${1}.dk.yml" << EOF
+priority: ${3}
+variables:
+  TEST_VAR: ${2}
+EOF
+  }
+  createConfigFileWithoutPriority() {
+    cat > "$TEST_ENV_PATH/.draky/${1}.dk.yml" << EOF
+variables:
+  TEST_VAR: ${2}
+EOF
+  }
+
+  createConfigFile test1 test1 10
+  createConfigFileWithoutPriority test2 test2
+
+  run ${DRAKY} core debug vars
+  [[ "$output" == *"TEST_VAR"* ]]
+  [[ "$output" == *"test1"* ]]
+
+  createConfigFile test1 test1 -10
+  createConfigFileWithoutPriority test2 test2
+
+  run ${DRAKY} core debug vars
+  [[ "$output" == *"TEST_VAR"* ]]
+  [[ "$output" == *"test2"* ]]
+}

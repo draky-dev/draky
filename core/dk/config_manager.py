@@ -2,11 +2,12 @@
 """
 import os
 import io
+from enum import Enum
+from typing import Union
 from dataclasses import dataclass
+
 import yaml
 from dotenv import dotenv_values
-
-from dk.utils import find_files_weighted_by_filename
 
 
 @dataclass
@@ -26,6 +27,67 @@ class ProjectData:
     vars: dict[str, str]
     commands_vars: dict | None
     paths: ProjectPaths | None
+
+class ConfigType(Enum):
+    """Available configuration types.
+    """
+    BASIC = 'basic'
+    ADDON = 'addon'
+    TEMPLATE = 'template'
+
+@dataclass
+class Config:
+    """Dataclass storing information about a single config file.
+    """
+    def __init__(self, config_type: ConfigType, content: dict):
+        self.type: ConfigType = config_type
+        self.variables: dict[str, str] = content['variables'] if 'variables' in content else {}
+        self.priority: int = content['priority'] if 'priority' in content else 0
+
+@dataclass
+class BasicConfig(Config):
+    """Dataclass storing the basic config.
+    """
+    def __init__(self, content: dict):
+        super().__init__(ConfigType.BASIC, content)
+
+@dataclass
+class AddonConfig(Config):
+    """Dataclass storing information about the addons.
+    """
+    def __init__(self, content: dict):
+        super().__init__(ConfigType.ADDON, content)
+        self.id = content['id']
+
+@dataclass
+class TemplateConfig(Config):
+    """Dataclass storing information about the templates.
+    """
+    def __init__(self, content: dict):
+        super().__init__(ConfigType.TEMPLATE, content)
+        self.id = content['id']
+
+Configs = Union[BasicConfig, AddonConfig, TemplateConfig]
+
+def fetch_configs(config_path) -> list[Configs]:
+    """Returns a list of config objects.
+    """
+    configs: list[Configs] = []
+    for path, _, files in os.walk(config_path):
+        for filename in files:
+            if not filename.endswith('dk.yml'):
+                continue
+            with open(f"{path}{os.sep}{filename}", 'r', encoding='utf8') as stream:
+                content = yaml.safe_load(stream)
+                if filename.endswith('addon.dk.yml'):
+                    configs.append(AddonConfig(content))
+                elif filename.endswith('template.dk.yml'):
+                    configs.append(TemplateConfig(content))
+                else:
+                    configs.append(BasicConfig(content))
+    configs.sort(key=lambda x: x.priority)
+
+    return configs
 
 class ConfigManager:
     """This class handles everything related to configuration and overall environment.
@@ -130,28 +192,16 @@ class ConfigManager:
         return self.__project_data.vars
 
     def __load_variables(self) -> None:
-        files = find_files_weighted_by_filename("*dk.yml", {
-            'core.dk.yml': -10,
-            'local.dk.yml': 10,
-        # Note that we are accessing paths directly, because at this point project context is not
-        # determined yet.
-        }, self.__project_data.paths.project_config)
-
+        """Loads variables.
+        """
+        configs = fetch_configs(self.__project_data.paths.project_config)
         env_content_list: list[str] = []
-
         # Add to the dictionary all existing variables that start with the prefix.
         env_content_list.append(self.__dict_into_env(
             {k: v for k, v in os.environ.items() if k.startswith(self.__draky_prefix)}
         ))
-
-        for path, filename in files:
-            path_full = path + '/' + filename
-            with open(path_full, 'r', encoding='utf8') as stream:
-                file_content = yaml.safe_load(stream)
-                if 'variables' in file_content:
-                    variables = file_content['variables']
-                    env_content_list.append(self.__dict_into_env(variables))
-
+        for config in configs:
+            env_content_list.append(self.__dict_into_env(config.variables))
         self.__project_data.vars = dotenv_values(stream=io.StringIO("\n".join(env_content_list)))
 
     def __dict_into_env(self, dictionary: dict[str, str]) -> str:
