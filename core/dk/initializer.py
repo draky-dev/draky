@@ -81,7 +81,6 @@ def initialize(config_manager: ConfigManager):
         project_config_path + "/core.dk.yml", "x", encoding='utf8'
     ) as file:
         file.write(f"# Do not manually edit this file. It's managed by Draky.\n"
-                   f"priority: -100\n"
                    f"variables:\n"
                    f"    DRAKY_PROJECT_ID: {project_id}\n"
                    f"    DRAKY_ENVIRONMENT: dev\n")

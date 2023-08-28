@@ -79,54 +79,66 @@ EOF
   [[ "$output" == *"test1"* ]]
 }
 
-@test "Vars priorities" {
+@test "Config dependencies" {
   _initialize_test_environment
-  createConfigFile() {
+    createConfigFile() {
     cat > "$TEST_ENV_PATH/.draky/${1}.dk.yml" << EOF
-priority: ${3}
+id: ${1}
 variables:
   TEST_VAR: ${2}
 EOF
   }
-  createConfigFile test1 test1 0
-  createConfigFile test2 test2 10
+  createConfigFileWithDependency() {
+    cat > "$TEST_ENV_PATH/.draky/${1}.dk.yml" << EOF
+id: ${1}
+variables:
+  TEST_VAR: ${2}
+dependencies:
+  - ${3}
+EOF
+  }
+  createConfigFile test1 value1
+  createConfigFileWithDependency test2 value2 test1
   run ${DRAKY} core debug vars
   [[ "$output" == *"TEST_VAR"* ]]
-  [[ "$output" == *"test2"* ]]
-  createConfigFile test1 test1 10
-  createConfigFile test2 test2 0
+  [[ "$output" == *"value2"* ]]
+  createConfigFile test2 value2
+  createConfigFileWithDependency test1 value1 test2
   run ${DRAKY} core debug vars
   [[ "$output" == *"TEST_VAR"* ]]
-  [[ "$output" == *"test1"* ]]
+  [[ "$output" == *"value1"* ]]
 }
 
-@test "Vars default priority" {
+@test "Config dependencies unmet" {
   _initialize_test_environment
-  createConfigFile() {
+  createConfigFileWithDependency() {
     cat > "$TEST_ENV_PATH/.draky/${1}.dk.yml" << EOF
-priority: ${3}
-variables:
-  TEST_VAR: ${2}
-EOF
-  }
-  createConfigFileWithoutPriority() {
-    cat > "$TEST_ENV_PATH/.draky/${1}.dk.yml" << EOF
-variables:
-  TEST_VAR: ${2}
+id: ${1}
+dependencies:
+  - ${2}
 EOF
   }
 
-  createConfigFile test1 test1 10
-  createConfigFileWithoutPriority test2 test2
+  createConfigFileWithDependency test1 nonexistentdependency
+  run ${DRAKY}
+  [[ "$status" == 1 ]]
+  [[ "$output" == *"nonexistentdependency"* ]]
+}
 
-  run ${DRAKY} core debug vars
-  [[ "$output" == *"TEST_VAR"* ]]
+@test "Config dependencies cyclic" {
+  _initialize_test_environment
+  createConfigFileWithDependency() {
+    cat > "$TEST_ENV_PATH/.draky/${1}.dk.yml" << EOF
+id: ${1}
+dependencies:
+  - ${2}
+EOF
+  }
+  createConfigFileWithDependency test1 test2
+  createConfigFileWithDependency test2 test1
+  run ${DRAKY}
+  [[ "$status" == 1 ]]
+  [[ "$output" == *"cycle"* ]]
   [[ "$output" == *"test1"* ]]
-
-  createConfigFile test1 test1 -10
-  createConfigFileWithoutPriority test2 test2
-
-  run ${DRAKY} core debug vars
-  [[ "$output" == *"TEST_VAR"* ]]
   [[ "$output" == *"test2"* ]]
 }
