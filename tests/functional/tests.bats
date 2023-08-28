@@ -23,11 +23,16 @@ _initialize_test_environment() {
 }
 
 @test "Environment initialization (custom template)" {
-  TEST_TEMPLATE_PATH=/root/.draky/templates/test-template/.draky
   TEST_TEMPLATE_FILE=test-template-file
-  TEST_TEMPLATE_FILE_PATH=${TEST_TEMPLATE_PATH}/${TEST_TEMPLATE_FILE}
-  mkdir -p ${TEST_TEMPLATE_PATH}
-  touch ${TEST_TEMPLATE_FILE_PATH}
+  createCustomTemplate() {
+    local TEST_TEMPLATE_PATH=/root/.draky/templates/${1}
+    mkdir -p "${TEST_TEMPLATE_PATH}"
+    touch "${TEST_TEMPLATE_PATH}/${TEST_TEMPLATE_FILE}"
+    cat > "${TEST_TEMPLATE_PATH}/template.dk.yml" << EOF
+id: ${1}
+EOF
+  }
+  createCustomTemplate test-template
   cd "$TEST_ENV_PATH"
   printf "test-project\n1\n" | ${DRAKY} env init
   [ -f "${TEST_ENV_PATH}/.draky/${TEST_TEMPLATE_FILE}" ]

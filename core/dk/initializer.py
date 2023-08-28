@@ -6,6 +6,7 @@ import shutil
 from typing import Generator
 from dataclasses import dataclass
 
+import yaml
 from colorama import Fore, Style
 
 from dk.config_manager import ConfigManager
@@ -24,15 +25,20 @@ class CustomTemplate(Template):
     """
     path_base: str
 
+def __get_template_id(template_path: str) -> str:
+    with open(template_path, 'r', encoding='utf8') as stream:
+        content = yaml.safe_load(stream)
+    if 'id' not in content:
+        raise ValueError("Template is missing ID.")
+    return content['id']
 
 def __templates_in_path(path_to_parent) -> Generator[CustomTemplate, None, None]:
     """Finds the list of template paths in the given girectory.
     """
     for fname in os.listdir(path_to_parent):
-        template_base = os.path.join(path_to_parent, fname)
-        template_root = os.path.join(template_base, './.draky')
-        if os.path.isdir(template_base) and os.path.isdir(template_root):
-            yield CustomTemplate(fname, template_base, template_root)
+        template_root = os.path.join(path_to_parent, fname)
+        template_id = __get_template_id(os.path.join(template_root, 'template.dk.yml'))
+        yield CustomTemplate(template_id, template_root, template_root)
 
 def initialize(config_manager: ConfigManager):
     """ Function initializing new project. """
@@ -70,7 +76,7 @@ def initialize(config_manager: ConfigManager):
             input(f"{Fore.LIGHTBLUE_EX}Enter template number: {Style.RESET_ALL}")
         chosen_template = available_templates_map[chosen_template_number]
 
-    chosen_template_path_draky = f"{chosen_template.path}/.draky"
+    chosen_template_path_draky = f"{chosen_template.path}"
     shutil.copytree(
         chosen_template_path_draky,
         project_config_path,
