@@ -8,6 +8,7 @@ ENV PATH="${PATH}:${DK_PATH_BIN}"
 COPY core ${DK_PATH}
 
 RUN apk add --no-cache \
+    bash \
     docker-cli \
     docker-cli-compose \
     python3 \
