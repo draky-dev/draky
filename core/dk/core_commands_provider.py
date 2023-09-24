@@ -18,27 +18,31 @@ class CoreCommandsProvider(CallableCommandsProvider):
         self.config_manager: ConfigManager = config_manager
 
         self._add_command(
-            CallableCommand('update', 'Update draky.', self.__update_draky)
-        )
-
-        self._add_command(
-            CallableCommand('destroy', 'Destroy draky core.', None)
-        )
-
-        self._add_command(
-            CallableCommand('start', 'Start draky core.', None)
-        )
-
-        self._add_command(
-            DebugCommandsProvider(config_manager, display_help_callback)
+            CallableCommand(
+                name='update',
+                help='Update draky.',
+                callback=self.__update_draky,
+            )
         )
 
         self._add_command(
             CallableCommand(
-                'internal',
-                'Internal endpoint for communication between the draky script and the draky core.',
-                self.__internal,
+                name='destroy',
+                help='Destroy draky core.',
+                callback=None,
             )
+        )
+
+        self._add_command(
+            CallableCommand(
+                name='start',
+                help='Start draky core.',
+                callback=None,
+            )
+        )
+
+        self._add_command(
+            DebugCommandsProvider(config_manager, display_help_callback)
         )
 
     def name(self) -> str | None:
@@ -53,20 +57,17 @@ class CoreCommandsProvider(CallableCommandsProvider):
         #@todo
         print("To be implemented.")
 
-    def __internal(self, reminder_args: list[str]):
-        if not reminder_args:
-            print("Further arguments are required.", file=sys.stderr)
-            sys.exit(1)
-
-        if reminder_args[0] == 'get-project-path':
-            project_path =\
-                self.config_manager.get_project_paths().project_config\
-                    if self.config_manager.is_project_context()\
-                    else None
-
-            if project_path:
-                print(project_path, end='')
-                sys.exit(0)
+    @staticmethod
+    def get_project_path(config_manager: ConfigManager):
+        """Handles the internal command for getting project's path.
+        """
+        project_path =\
+            config_manager.get_project_paths().project_config\
+                if config_manager.is_project_context()\
+                else None
+        if project_path:
+            print(project_path, end='')
+            sys.exit(0)
 
 class DebugCommandsProvider(CallableCommandsProvider):
     """Provides core commands useful for debugging.
@@ -78,7 +79,11 @@ class DebugCommandsProvider(CallableCommandsProvider):
         self.config_manager: ConfigManager = config_manager
 
         self._add_command(
-            CallableCommand('vars', "List project's variables.", self.__debug_vars)
+            CallableCommand(
+                name='vars',
+                help="List project's variables.",
+                callback=self.__debug_vars,
+            )
         )
 
     def name(self) -> str | None:

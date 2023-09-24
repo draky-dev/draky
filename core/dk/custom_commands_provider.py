@@ -69,6 +69,13 @@ class CustomCommandsProvider:
             except (IOError, yaml.YAMLError):
                 pass
 
-            custom_commands.append(ServiceCommand(command_name, help_text, service, full_path))
+            custom_commands.append(
+                ServiceCommand(
+                    name=command_name,
+                    help=help_text,
+                    service=service,
+                    cmd=full_path,
+                )
+            )
 
         return custom_commands

@@ -48,6 +48,13 @@ class Config:
         self.variables: dict[str, str] = content['variables'] if 'variables' in content else {}
         self.dependencies: list[str] = content['dependencies'] if 'dependencies' in content else []
         self.path: str = path
+        self.dirpath: str = os.path.dirname(path)
+
+class VariableNotExists(ValueError):
+    """This is a helper exception to indicate that variable doesn't exist when requested.
+    """
+    def __init__(self, name):
+        super().__init__(f"Variable {name} doesn't exist.")
 
 @dataclass
 class BasicConfig(Config):
@@ -171,6 +178,8 @@ class ConfigManager:
             commands=commands_path,
         )
 
+        self.__configs: list[Configs] = fetch_configs(self.get_project_config_path())
+
         self.__load_variables()
         # These variables will be empty if we are just initializing the project.
         self.__project_data.project = self.__project_data.vars['DRAKY_PROJECT_ID']\
@@ -186,7 +195,7 @@ class ConfigManager:
 
         return self.__project_data.paths
 
-    def get_new_project_config_path(self) -> str:
+    def get_project_config_path(self) -> str:
         """Returns project path for
         """
         return self.__project_data.paths.project_config
@@ -212,6 +221,11 @@ class ConfigManager:
 
         return self.__project_data.env
 
+    def get_env_path(self) -> str:
+        """Returns the path to the current environment directory.
+        """
+        return f"{self.get_project_paths().environments}/{self.get_env()}"
+
     def get_command_vars(self, command: str) -> dict:
         """Returns the list of command-related environmental variables.
         """
@@ -231,16 +245,33 @@ class ConfigManager:
 
         return self.__project_data.vars
 
+    def get_addons(self) -> list[AddonConfig]:
+        """Returns configuration objects representing addons.
+        """
+        return list(filter(lambda config: isinstance(config, AddonConfig), self.__configs))
+
+
+    def resolve_vars_in_string(self, string: str) -> str:
+        """Replaces vars references with their values in the string.
+        """
+        found_vars = re.findall(r"\${([A-Z_]+)}", string)
+        existing_vars = self.get_vars()
+        for var in found_vars:
+            if var not in existing_vars:
+                raise VariableNotExists(var)
+            string = string.replace(f"${{{var}}}", existing_vars[var])
+
+        return string
+
     def __load_variables(self) -> None:
         """Loads variables.
         """
-        configs = fetch_configs(self.__project_data.paths.project_config)
         env_content_list: list[str] = []
         # Add to the dictionary all existing variables that start with the prefix.
         env_content_list.append(self.__dict_into_env(
             {k: v for k, v in os.environ.items() if k.startswith(self.__draky_prefix)}
         ))
-        for config in configs:
+        for config in self.__configs:
             env_content_list.append(self.__dict_into_env(config.variables))
         self.__project_data.vars = dotenv_values(stream=io.StringIO("\n".join(env_content_list)))
 

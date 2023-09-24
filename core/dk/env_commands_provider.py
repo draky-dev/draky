@@ -3,7 +3,7 @@
 
 from typing import Callable
 
-from dk.command import CallableCommand
+from dk.command import CallableCommand, Flag
 from dk.command_provider import CallableCommandsProvider
 from dk.process_executor import ProcessExecutor
 
@@ -22,25 +22,62 @@ class EnvCommandsProvider(CallableCommandsProvider):
 
         self._add_command(
             CallableCommand(
-                'init',
-                'Create the environment configuration for the project.',
-                None,
+                name='init',
+                help='Create the environment configuration for the project.',
+                callback=None,
             )
         )
 
         if not is_project_context:
             return
 
+        self.substitute_variables_flag: str = '-s'
+
         self._add_command(
-            CallableCommand('up', 'Start the environment', self.__start_environment)
+            CallableCommand(
+                name='up',
+                help='Start the environment',
+                callback=self.__start_environment,
+                flags=[
+                    Flag(
+                        name=self.substitute_variables_flag,
+                        help='If the compose file is being build from the recipe, it determines if '
+                             'environmental variables should be substituted in the resulting file.',
+                        action='store_true',
+                    )
+                ]
+            )
         )
 
         self._add_command(
-            CallableCommand('stop', 'Freeze the environment', self.__freeze_environment)
+            CallableCommand(
+                name='stop',
+                help='Freeze the environment',
+                callback=self.__freeze_environment,
+            ),
         )
 
         self._add_command(
-            CallableCommand('down', 'Destroy the environment', self.__destroy_environment)
+            CallableCommand(
+                name='down',
+                help='Destroy the environment',
+                callback=self.__destroy_environment,
+            ),
+        )
+
+        self._add_command(
+            CallableCommand(
+                name='build',
+                help='Build the compose file.',
+                callback=self.__build_environment,
+                flags=[
+                    Flag(
+                        name=self.substitute_variables_flag,
+                        help='Substitute variables with their values.',
+                        action='store_true',
+                    )
+                ]
+            )
         )
 
     def name(self) -> str | None:
@@ -54,6 +91,10 @@ class EnvCommandsProvider(CallableCommandsProvider):
     def __start_environment(self, _reminder_args: list[str]):
         """Starts the environment.
         """
+        build_flags =\
+            [self.substitute_variables_flag] if self.substitute_variables_flag in _reminder_args\
+                else []
+        self.__build_environment(build_flags)
         self.process_executor.env_start()
 
     def __freeze_environment(self, _reminder_args: list[str]):
@@ -65,3 +106,9 @@ class EnvCommandsProvider(CallableCommandsProvider):
         """Destroys the environment.
         """
         self.process_executor.env_destroy()
+
+    def __build_environment(self, _reminder_args: list[str]):
+        """Build environment's definition.
+        """
+        substitute = self.substitute_variables_flag in _reminder_args
+        self.process_executor.env_build(substitute)

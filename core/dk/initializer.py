@@ -43,7 +43,7 @@ def __templates_in_path(path_to_parent) -> Generator[CustomTemplate, None, None]
 def initialize(config_manager: ConfigManager):
     """ Function initializing new project. """
 
-    project_config_path: str = config_manager.get_new_project_config_path()
+    project_config_path: str = config_manager.get_project_config_path()
 
     if os.listdir(project_config_path):
         print(f"{Fore.LIGHTRED_EX}\".drake\" directory is not empty. "

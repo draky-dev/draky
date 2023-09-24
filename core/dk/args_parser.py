@@ -50,6 +50,9 @@ class ArgsSubparser:
             nargs=argparse.REMAINDER,
             type=str,
         )
+        if command.flags:
+            for flag in command.flags:
+                parser.add_argument(flag.name, help=flag.help, action=flag.action)
 
     def add_commands(self, commands: list[EmptyCommand]) -> None:
         """Add a list of commands.

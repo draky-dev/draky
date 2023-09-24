@@ -147,3 +147,81 @@ EOF
   [[ "$output" == *"test1"* ]]
   [[ "$output" == *"test2"* ]]
 }
+
+RECIPE_PATH="${TEST_ENV_PATH}/.draky/env/dev/docker-compose.recipe.yml"
+COMPOSE_PATH="${TEST_ENV_PATH}/.draky/env/dev/docker-compose.yml"
+
+@test "Build compose" {
+  _initialize_test_environment
+  # Create the recipe.
+    cat > "$RECIPE_PATH" << EOF
+services:
+  php:
+    service:
+      image: php-image
+EOF
+  run ${DRAKY} env build
+  [[ "$status" == 0 ]]
+  [ -f "${COMPOSE_PATH}" ]
+  grep -q "image: php-image" "$COMPOSE_PATH"
+
+}
+
+@test "Build compose: import service from an external file" {
+  _initialize_test_environment
+  # Create the recipe.
+  cat > "$RECIPE_PATH" << EOF
+services:
+  php:
+    service: ../../services/php/service.yml
+EOF
+  PHP_SERVICE_PATH="${TEST_ENV_PATH}/.draky/services/php"
+  mkdir -p ${PHP_SERVICE_PATH}
+  # Create an external service file.
+  cat > "${PHP_SERVICE_PATH}/service.yml" << EOF
+service:
+  image: php-image
+EOF
+  ${DRAKY} env build
+  grep -q "image: php-image" "$COMPOSE_PATH"
+}
+
+@test "Build compose: volume paths are converted" {
+  _initialize_test_environment
+  # Create the recipe.
+  cat > "$RECIPE_PATH" << EOF
+services:
+  php:
+    service: ../../services/php/service.yml
+EOF
+  PHP_SERVICE_PATH="${TEST_ENV_PATH}/.draky/services/php"
+  mkdir -p ${PHP_SERVICE_PATH}
+  # Create an external service file.
+  cat > "${PHP_SERVICE_PATH}/service.yml" << EOF
+service:
+  image: php-image
+  volumes:
+    - ./test-volume:/test-volume
+EOF
+  ${DRAKY} env build
+  grep -q "../../services/php/./test-volume" "$COMPOSE_PATH"
+}
+
+@test "Build compose: variable substitution flag" {
+  _initialize_test_environment
+  # Create the recipe.
+  # Note that we are escaping the variable, so it won't get substituted by bash.
+  cat > "$RECIPE_PATH" << EOF
+services:
+  php:
+    service:
+      image: "\${PHP_IMAGE_TEST}"
+EOF
+  # Give variable a value.
+  cat > "${TEST_ENV_PATH}/.draky/variables.dk.yml" << EOF
+variables:
+  PHP_IMAGE_TEST: php-image
+EOF
+  ${DRAKY} env build -s
+  grep -q "image: php-image" "$COMPOSE_PATH"
+}

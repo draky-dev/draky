@@ -1,11 +1,16 @@
 """Process executor. Executes other processes.
 """
 
+import os
 import sys
 import pathlib
 from subprocess import Popen, PIPE, run, DEVNULL
 
+import yaml
+
+from dk.compose_manager import ComposeManager, ComposeRecipe
 from dk.config_manager import ConfigManager
+from dk.hook_manager import HookManager
 from dk.utils import get_path_up_to_project_root
 
 
@@ -13,14 +18,19 @@ class ProcessExecutor:
     """Class handling execution of system processes.
     """
 
-    def __init__(self, config: ConfigManager) -> None:
+    def __init__(
+            self,
+            config: ConfigManager,
+            compose_manager: ComposeManager,
+            hook_manager: HookManager,
+    ) -> None:
         self.config: ConfigManager = config
+        self.compose_manager: ComposeManager = compose_manager
+        self.hook_manager: HookManager = hook_manager
         self.stdin_passed: bool = False
 
     def get_command_base(self) -> list:
         """Returns beginning of every command.
-
-        :return: list
         """
         return [
             'docker',
@@ -28,14 +38,24 @@ class ProcessExecutor:
             '-p',
             f"{self.config.get_project_id()}",
             '-f',
-            f"{self.config.get_project_paths().environments}/{self.config.get_env()}/"
-            f"docker-compose.yml"
+            self.__get_compose_path(),
         ]
+
+    def env_build(self, substitute_vars: bool = False):
+        """Build the environment's definition.
+        """
+        recipe_path = self.__get_recipe_path()
+        if os.path.exists(recipe_path):
+            with open(recipe_path, "r", encoding='utf8') as f:
+                recipe_content = yaml.safe_load(f)
+            recipe = ComposeRecipe(recipe_content)
+            compose = self.compose_manager.create(recipe, recipe_path, self.__get_compose_path())
+            compose.set_substituted_variables(substitute_vars)
+            self.hook_manager.addon_alter_services(compose)
+            self.compose_manager.save(compose)
 
     def env_start(self) -> None:
         """Start environment.
-
-        :return: None
         """
         command = self.get_command_base()
         command.extend(['up', '-d'])
@@ -43,8 +63,6 @@ class ProcessExecutor:
 
     def env_freeze(self) -> None:
         """Freezes environment.
-
-        :return: None
         """
         command = self.get_command_base()
         command.extend(['stop'])
@@ -52,8 +70,6 @@ class ProcessExecutor:
 
     def env_destroy(self) -> None:
         """Destroys environment.
-
-        :return:
         """
         command = self.get_command_base()
         command.extend(['down', '-v'])
@@ -140,3 +156,9 @@ class ProcessExecutor:
         command.extend([service, dest])
         command.extend(reminder_args)
         self.execute(command, True)
+
+    def __get_recipe_path(self) -> str:
+        return f"{self.config.get_env_path()}/docker-compose.recipe.yml"
+
+    def __get_compose_path(self) -> str:
+        return f"{self.config.get_env_path()}/docker-compose.yml"

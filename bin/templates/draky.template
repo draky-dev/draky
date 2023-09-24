@@ -100,7 +100,7 @@ execute_core() {
 
   local CURRENT_CONFIG_PATH
   # We attach /dev/null to stdin just so it won't get used up, and will be still available for the main "exec" command.
-  CURRENT_CONFIG_PATH="$(docker exec --user="$DRAKY_HOST_UID:$DRAKY_HOST_GID" "${CONTAINER_NAME}" dk-core core internal get-project-path < /dev/null)"
+  CURRENT_CONFIG_PATH="$(docker exec --user="$DRAKY_HOST_UID:$DRAKY_HOST_GID" "${CONTAINER_NAME}" dk-core core __internal get-project-path < /dev/null)"
 
   if [[ "$PROJECT_CONFIG_PATH" != "$CURRENT_CONFIG_PATH" ]]; then
     echo "Leaving the context: '${CURRENT_CONFIG_PATH:-None}'."

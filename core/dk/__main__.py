@@ -6,8 +6,10 @@ import sys
 from colorama import Fore, Style
 
 from dk.args_parser import ArgsParser
+from dk.compose_manager import ComposeManager
 from dk.core_commands_provider import CoreCommandsProvider
 from dk.env_commands_provider import EnvCommandsProvider
+from dk.hook_manager import HookManager
 from dk.process_executor import ProcessExecutor
 from dk.config_manager import ConfigManager
 from dk.custom_commands_provider import CustomCommandsProvider
@@ -16,15 +18,26 @@ from dk.initializer import initialize
 
 config_manager = ConfigManager()
 
-process_executor = ProcessExecutor(config_manager)
+# First we need to handle the "get-project-path" command that may be run before requirements for
+# the rest of the core are fulfilled.
+if (
+    len(sys.argv) == 4
+    and sys.argv[1] == 'core'
+    and sys.argv[2] == '__internal'
+    and sys.argv[3] == 'get-project-path'
+):
+    CoreCommandsProvider.get_project_path(config_manager)
+    sys.exit(0)
 
 # If we are initializing, we need to complete initialization before running anything else, as
 # therwise config manager won't have enough data.
-try:
-    if sys.argv[1] == 'env' and sys.argv[2] == 'init':
-        initialize(config_manager)
-except IndexError:
-    pass
+if len(sys.argv) == 3 and sys.argv[1] == 'env' and sys.argv[2] == 'init':
+    initialize(config_manager)
+    sys.exit(0)
+
+compose_builder = ComposeManager(config_manager)
+hook_manager = HookManager(config_manager)
+process_executor = ProcessExecutor(config_manager, compose_builder, hook_manager)
 
 args_parser = ArgsParser(version=config_manager.version)
 
@@ -72,7 +85,7 @@ if args_parser.has_command(sys.argv[1]):
                 f" '{config_manager.get_project_paths().environments}'."
             )
             sys.exit(1)
-        env_commands_provider.run(sys.argv[2], sys.argv[4:], sys.argv[1:2])
+        env_commands_provider.run(sys.argv[2], sys.argv[3:], sys.argv[1:2])
     elif sys.argv[1] == core_commands_provider.name():
         core_commands_provider.run(sys.argv[2], sys.argv[3:], sys.argv[1:2])
     else:
