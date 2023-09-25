@@ -54,13 +54,13 @@ EOF
   }
 
   testDefaultHelp "${DRAKY}" core
-  testDefaultHelp "${DRAKY}" core debug
   testDefaultHelp "${DRAKY}" env
+    testDefaultHelp "${DRAKY}" env debug
 }
 
 @test "Core vars" {
   _initialize_test_environment
-  run "${DRAKY}" core debug vars
+  run "${DRAKY}" env debug vars
 
   [[ "$output" == *"DRAKY_VERSION"* ]]
   [[ "$output" == *"DRAKY_HOST_UID"* ]]
@@ -79,7 +79,7 @@ EOF
 variables:
   TEST_VAR: test1
 EOF
-  run ${DRAKY} core debug vars
+  run ${DRAKY} env debug vars
   [[ "$output" == *"TEST_VAR"* ]]
   [[ "$output" == *"test1"* ]]
 }
@@ -104,12 +104,12 @@ EOF
   }
   createConfigFile test1 value1
   createConfigFileWithDependency test2 value2 test1
-  run ${DRAKY} core debug vars
+  run ${DRAKY} env debug vars
   [[ "$output" == *"TEST_VAR"* ]]
   [[ "$output" == *"value2"* ]]
   createConfigFile test2 value2
   createConfigFileWithDependency test1 value1 test2
-  run ${DRAKY} core debug vars
+  run ${DRAKY} env debug vars
   [[ "$output" == *"TEST_VAR"* ]]
   [[ "$output" == *"value1"* ]]
 }

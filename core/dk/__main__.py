@@ -52,11 +52,11 @@ env_commands_provider = EnvCommandsProvider(
     process_executor,
     config_manager.is_project_context(),
     display_help,
+    config_manager,
 )
 args_parser.add_command_group(env_commands_provider)
 
 core_commands_provider = CoreCommandsProvider(
-    config_manager,
     display_help,
 )
 args_parser.add_command_group(core_commands_provider)

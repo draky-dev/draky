@@ -5,6 +5,7 @@ from typing import Callable
 
 from dk.command import CallableCommand, Flag
 from dk.command_provider import CallableCommandsProvider
+from dk.config_manager import ConfigManager
 from dk.process_executor import ProcessExecutor
 
 class EnvCommandsProvider(CallableCommandsProvider):
@@ -16,6 +17,7 @@ class EnvCommandsProvider(CallableCommandsProvider):
             process_executor: ProcessExecutor,
             is_project_context: bool,
             display_help_callback: Callable,
+            config_manager: ConfigManager,
     ):
         super().__init__(display_help_callback)
         self.process_executor: ProcessExecutor = process_executor
@@ -80,6 +82,10 @@ class EnvCommandsProvider(CallableCommandsProvider):
             )
         )
 
+        self._add_command(
+            DebugEnvCommandsProvider(config_manager, display_help_callback)
+        )
+
     def name(self) -> str | None:
         """Gives away information if the current executor supports execution of the given command.
         """
@@ -112,3 +118,37 @@ class EnvCommandsProvider(CallableCommandsProvider):
         """
         substitute = self.substitute_variables_flag in _reminder_args
         self.process_executor.env_build(substitute)
+
+class DebugEnvCommandsProvider(CallableCommandsProvider):
+    """Provides core commands useful for debugging.
+    """
+
+    def __init__(self, config_manager: ConfigManager, display_help_callback: Callable):
+        super().__init__(display_help_callback)
+
+        self.config_manager: ConfigManager = config_manager
+
+        self._add_command(
+            CallableCommand(
+                name='vars',
+                help="List project's variables.",
+                callback=self.__debug_vars,
+            )
+        )
+
+    def name(self) -> str | None:
+        """Gives away information if the current executor supports execution of the given command.
+        """
+        return 'debug'
+
+    def help_text(self) -> str:
+        return 'Debug environment'
+
+    def __debug_vars(self, _reminder_args: list[str]):
+        if not self.config_manager.is_project_context():
+            print("Variables are available only in the project context")
+            return
+        #@todo
+        variables = self.config_manager.get_vars()
+        for variable in variables:
+            print(f"{variable} = {variables[variable]}")
