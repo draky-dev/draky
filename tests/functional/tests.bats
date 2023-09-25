@@ -55,6 +55,8 @@ EOF
 
   testDefaultHelp "${DRAKY}" core
   testDefaultHelp "${DRAKY}" env
+
+  _initialize_test_environment
   testDefaultHelp "${DRAKY}" env debug
 }
 
