@@ -55,7 +55,7 @@ EOF
 
   testDefaultHelp "${DRAKY}" core
   testDefaultHelp "${DRAKY}" env
-    testDefaultHelp "${DRAKY}" env debug
+  testDefaultHelp "${DRAKY}" env debug
 }
 
 @test "Core vars" {
