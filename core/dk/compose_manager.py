@@ -98,6 +98,7 @@ class Compose:
         """
         return self.__recipe
 
+
 class ComposeManager:
     """This class is responsible for building a compose file based on the given recipe.
     """
@@ -128,16 +129,6 @@ class ComposeManager:
             # If volume starts with a variable, then also assume it's absolute.
             return volume.startswith(('/', '${'))
 
-        #def volume_convert_absolute(volume: str) -> str:
-        #    """Convert the absolute path into the relative one.
-        #    """
-        #    return volume.replace(
-        #        self.config.get_project_config_path() + os.sep,
-        #        os.path.relpath(
-        #            self.config.get_project_config_path(), os.path.dirname(output_path)
-        #        ) + os.sep
-        #    )
-
         def volume_convert_relative(volume: str, service_path: str) -> str:
             """Change the relative path to keep it relative to the service it came from.
             """
@@ -148,24 +139,64 @@ class ComposeManager:
         for service_name in services:
             service_data = services[service_name]
 
-            if 'service' not in service_data:
-                raise ValueError(
-                    f"'{service_name}' service definition in the recipe is missing the required"
-                    f"'content' attribute."
-                )
+            service = None
+            remote_file_path = None
 
-            content = service_data['service']
+            # Validate the basic structure.
+            if 'extends' in service_data:
+                extends = service_data['extends']
+                if not isinstance(extends, dict):
+                    raise ValueError(
+                        f"'extends' key has to be a dictionary."
+                    )
 
-            service_file_path: str|None = None
-            if isinstance(content, str):
-                service_file_path = os.path.dirname(recipe_path) + os.sep + content
-                with open(service_file_path, "r", encoding='utf8') as f:
-                    service_recipe = yaml.safe_load(f)
-                service = service_recipe['service']
-            elif isinstance(content, dict):
-                service = content
-            else:
-                raise ValueError("Unsupported service reference.")
+                if 'file' not in extends:
+                    raise ValueError(
+                        f"Error in the '{service_name}' service. The 'file' value is required if the service extends"
+                        f"another service."
+                    )
+                remote_file_path = os.path.dirname(recipe_path) + os.sep + extends['file']
+                if not isinstance(remote_file_path, str):
+                    raise ValueError(
+                        f"Error in the '{service_name}' service. The 'file' value has to be a string."
+                    )
+
+                if 'service' not in extends:
+                    raise ValueError(
+                        f"Error in the '{service_name}' service. The 'service' value is required if the service extends"
+                        f"another service."
+                    )
+                remote_file_service = extends['service']
+                if not isinstance(remote_file_service, str):
+                    raise ValueError(
+                        f"Error in the '{service_name}' service. The 'service' value has to be a string."
+                    )
+
+                with open(remote_file_path, "r", encoding='utf8') as f:
+                    remote_file_dict = yaml.safe_load(f)
+
+                if 'services' not in remote_file_dict:
+                    raise ValueError(
+                        f"Error in the '{service_name}' service. The file '{remote_file_path}' doesn't have a"
+                        f"'services' key."
+                    )
+
+                if remote_file_service not in remote_file_dict['services']:
+                    raise ValueError(
+                        f"Error in the '{service_name}' service. The file '{remote_file_path}' doesn't have a "
+                        f"'{remote_file_service}' service."
+                    )
+
+                if not isinstance(remote_file_dict['services'][remote_file_service], dict):
+                    raise ValueError(
+                        f"Error in the '{service_name}' service. The service '{remote_file_service}' in the "
+                        f"'{remote_file_path}' file has to be a dictionary."
+                    )
+
+                service = remote_file_dict['services'][remote_file_service]
+
+            if not service:
+                service = service_data
 
             # If we are getting the service data from an external file, we need to modify
             # all volumes, so they would still reference the original locations, because the
@@ -175,7 +206,7 @@ class ComposeManager:
                     volume = service['volumes'][i]
                     service['volumes'][i] =\
                         volume if volume_is_absolute(volume)\
-                            else volume_convert_relative(volume, service_file_path)
+                            else volume_convert_relative(volume, remote_file_path)
 
             # Set up the correct dependencies.
             if 'depends_on' in service_data:

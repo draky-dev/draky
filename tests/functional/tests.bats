@@ -156,7 +156,7 @@ COMPOSE_PATH="${TEST_ENV_PATH}/.draky/env/dev/docker-compose.yml"
 @test "Build compose" {
   _initialize_test_environment
   # Create the recipe.
-    cat > "$RECIPE_PATH" << EOF
+  cat > "$RECIPE_PATH" << EOF
 services:
   php:
     service:
@@ -175,14 +175,17 @@ EOF
   cat > "$RECIPE_PATH" << EOF
 services:
   php:
-    service: ../../services/php/service.yml
+    extends:
+      file: ../../services/php/services.yml
+      service: php
 EOF
   PHP_SERVICE_PATH="${TEST_ENV_PATH}/.draky/services/php"
   mkdir -p ${PHP_SERVICE_PATH}
   # Create an external service file.
-  cat > "${PHP_SERVICE_PATH}/service.yml" << EOF
-service:
-  image: php-image
+  cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
+services:
+  php:
+    image: php-image
 EOF
   ${DRAKY} env build
   grep -q "image: php-image" "$COMPOSE_PATH"
@@ -194,16 +197,19 @@ EOF
   cat > "$RECIPE_PATH" << EOF
 services:
   php:
-    service: ../../services/php/service.yml
+    extends:
+      file: ../../services/php/services.yml
+      service: php
 EOF
   PHP_SERVICE_PATH="${TEST_ENV_PATH}/.draky/services/php"
   mkdir -p ${PHP_SERVICE_PATH}
   # Create an external service file.
-  cat > "${PHP_SERVICE_PATH}/service.yml" << EOF
-service:
-  image: php-image
-  volumes:
-    - ./test-volume:/test-volume
+  cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
+services:
+  php:
+    image: php-image
+    volumes:
+      - ./test-volume:/test-volume
 EOF
   ${DRAKY} env build
   grep -q "../../services/php/./test-volume" "$COMPOSE_PATH"
