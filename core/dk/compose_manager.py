@@ -106,7 +106,7 @@ class ComposeManager:
     def __init__(self, config: ConfigManager):
         self.config = config
 
-    def create(self, recipe: ComposeRecipe, recipe_path: str, output_path: str) -> Compose:
+    def create(self, recipe: ComposeRecipe, recipe_path: str, output_path: str) -> Compose: # pylint: disable=too-many-branches
         """Creates a compose content from the given recipe.
         :param recipe:
           Dictionary storing the recipe's data.
@@ -147,29 +147,31 @@ class ComposeManager:
                 extends = service_data['extends']
                 if not isinstance(extends, dict):
                     raise ValueError(
-                        f"'extends' key has to be a dictionary."
+                        f"Error in the '{service_name}' service. 'extends' key has to be a "
+                        f"dictionary."
                     )
-
                 if 'file' not in extends:
                     raise ValueError(
-                        f"Error in the '{service_name}' service. The 'file' value is required if the service extends"
-                        f"another service."
+                        f"Error in the '{service_name}' service. The 'file' value is required if "
+                        f"the service extends another service."
                     )
                 remote_file_path = os.path.dirname(recipe_path) + os.sep + extends['file']
                 if not isinstance(remote_file_path, str):
                     raise ValueError(
-                        f"Error in the '{service_name}' service. The 'file' value has to be a string."
+                        f"Error in the '{service_name}' service. The 'file' value has to be a "
+                        f"string."
                     )
 
                 if 'service' not in extends:
                     raise ValueError(
-                        f"Error in the '{service_name}' service. The 'service' value is required if the service extends"
-                        f"another service."
+                        f"Error in the '{service_name}' service. The 'service' value is required "
+                        f"if the service extends another service."
                     )
                 remote_file_service = extends['service']
                 if not isinstance(remote_file_service, str):
                     raise ValueError(
-                        f"Error in the '{service_name}' service. The 'service' value has to be a string."
+                        f"Error in the '{service_name}' service. The 'service' value has to be "
+                        f"a string."
                     )
 
                 with open(remote_file_path, "r", encoding='utf8') as f:
@@ -177,20 +179,21 @@ class ComposeManager:
 
                 if 'services' not in remote_file_dict:
                     raise ValueError(
-                        f"Error in the '{service_name}' service. The file '{remote_file_path}' doesn't have a"
-                        f"'services' key."
+                        f"Error in the '{service_name}' service. The file '{remote_file_path}' "
+                        f"doesn't have a 'services' key."
                     )
 
                 if remote_file_service not in remote_file_dict['services']:
                     raise ValueError(
-                        f"Error in the '{service_name}' service. The file '{remote_file_path}' doesn't have a "
-                        f"'{remote_file_service}' service."
+                        f"Error in the '{service_name}' service. The file '{remote_file_path}' "
+                        f"doesn't have a '{remote_file_service}' service."
                     )
 
                 if not isinstance(remote_file_dict['services'][remote_file_service], dict):
                     raise ValueError(
-                        f"Error in the '{service_name}' service. The service '{remote_file_service}' in the "
-                        f"'{remote_file_path}' file has to be a dictionary."
+                        f"Error in the '{service_name}' service. The service"
+                        f"'{remote_file_service}' in the '{remote_file_path}' file has to be a "
+                        f"dictionary."
                     )
 
                 service = remote_file_dict['services'][remote_file_service]
