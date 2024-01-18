@@ -23,7 +23,12 @@ class ComposeRecipe:
         services = self.get_services()
         if service not in services:
             raise ValueError(f"Unknown service '{service}'")
-        return services[service]['addons'] if 'addons' in services[service] else []
+
+        if 'draky' not in services[service]:
+            return []
+
+        return services[service]['draky']['addons']\
+            if 'addons' in services[service]['draky'] else []
 
     def get_services(self) -> dict:
         """Returns the services defined by the recipe.
@@ -210,10 +215,6 @@ class ComposeManager:
                     service['volumes'][i] =\
                         volume if volume_is_absolute(volume)\
                             else volume_convert_relative(volume, remote_file_path)
-
-            # Set up the correct dependencies.
-            if 'depends_on' in service_data:
-                service['depends_on'] = service_data['depends_on']
 
             compose['services'][service_name] = service
         return Compose(output_path, compose, self.config.resolve_vars_in_string, recipe)

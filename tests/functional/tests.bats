@@ -159,8 +159,7 @@ COMPOSE_PATH="${TEST_ENV_PATH}/.draky/env/dev/docker-compose.yml"
   cat > "$RECIPE_PATH" << EOF
 services:
   php:
-    service:
-      image: php-image
+    image: php-image
 EOF
   run ${DRAKY} env build
   [[ "$status" == 0 ]]
@@ -232,4 +231,36 @@ variables:
 EOF
   ${DRAKY} env build -s
   grep -q "image: php-image" "$COMPOSE_PATH"
+}
+
+@test "Addons can alter services" {
+  _initialize_test_environment
+
+  # Create a test addon.
+  ADDON_PATH="${TEST_ENV_PATH}/.draky/addons/test-addon"
+  mkdir -p "$ADDON_PATH"
+  # Create the addon config file.
+  cat > "${ADDON_PATH}/test-addon.addon.dk.yml" << EOF
+id: test-addon
+EOF
+
+  ENTRYPOINT_SCRIPT=/test-addon.entrypoint.sh
+
+  cat > "${ADDON_PATH}/hooks.py" << EOF
+def alter_service(name: str, service: dict, utils: object, addon: dict):
+    service['entrypoint'] = ['$ENTRYPOINT_SCRIPT']
+EOF
+
+  # Create the recipe.
+  cat > "$RECIPE_PATH" << EOF
+services:
+  php:
+    image: test-image
+    draky:
+      addons:
+        - test-addon
+EOF
+
+  ${DRAKY} env build
+  grep -q "$ENTRYPOINT_SCRIPT" "$COMPOSE_PATH"
 }
