@@ -75,27 +75,32 @@ class ProcessExecutor:
         command.extend(['down', '-v'])
         self.execute(command)
 
-    def execute(self, command: list, pass_stdin: bool = False) -> None:
+    def execute(self, command: list, pass_stdin: bool = False, container: bool = False) -> None:
         """Executes given command.
         """
         if pass_stdin:
             if self.stdin_passed:
                 raise ValueError("stdin has already been used up")
             self.stdin_passed = True
-        stdin = sys.stdin if pass_stdin else DEVNULL
+        # If we are not passing stdin, we need to pass "DEVNULL" if we execute this command in
+        # a container, and "None" if we run this command on host.
+        # For some reason if that's not the case, stdin isn't available either in the script in
+        # the container, or on the host.
+        # @todo Figure out why that's the case and write an explanation here.
+        stdin = sys.stdin if pass_stdin else DEVNULL if container else None
         run(command, check=False, stdin=stdin, env=self.config.get_vars())
 
     def execute_pipe(
             self,
             commands: list,
-            previous_process:Popen[bytes] | Popen[str | bytes] = None,
+            previous_process: Popen[bytes] | Popen[str | bytes] = None,
             pass_stdin: bool = False
     ) -> None:
         """Executes chain of commands and pipes output from the previous one, to the next one.
         """
         first_command = commands.pop(0)
         stdout = PIPE if commands else sys.stdout
-        default_stdin = DEVNULL
+        default_stdin = None
         if pass_stdin:
             if self.stdin_passed:
                 raise ValueError("stdin has already been used up")
@@ -134,13 +139,13 @@ class ProcessExecutor:
         # Prepare the dir path for the script to be copied.
         mkdir_command = self.get_command_base()
         mkdir_command.extend(['exec', '-T', service, 'mkdir',  '-p', dest_path])
-        self.execute(mkdir_command)
+        self.execute(mkdir_command, False, True)
 
         # Copy script into container to avoid having to pipe commands, as that would disable
         # coloring.
         copy_command = self.get_command_base()
         copy_command.extend([
-            'exec', '-T', service, 'bash', '-c', f"cat > {dest} < /dev/stdin;chmod a+x {dest}"
+            'exec', '-T', service, 'sh', '-c', f"cat > {dest} < /dev/stdin;chmod a+x {dest}"
         ])
         self.execute_pipe([['cat', script_path], copy_command])
 
@@ -155,7 +160,7 @@ class ProcessExecutor:
             command.extend(['-T'])
         command.extend([service, dest])
         command.extend(reminder_args)
-        self.execute(command, True)
+        self.execute(command, True, True)
 
     def __get_recipe_path(self) -> str:
         return f"{self.config.get_env_path()}/docker-compose.recipe.yml"

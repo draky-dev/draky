@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 
 TEST_ENV_PATH="/draky-test-environment"
+RECIPE_PATH="${TEST_ENV_PATH}/.draky/env/dev/docker-compose.recipe.yml"
+COMPOSE_PATH="${TEST_ENV_PATH}/.draky/env/dev/docker-compose.yml"
 
 bats_require_minimum_version 1.9.0
 
@@ -9,6 +11,7 @@ setup() {
 }
 
 teardown() {
+  ${DRAKY} env down
   rm -r "${TEST_ENV_PATH}"
 }
 
@@ -150,9 +153,6 @@ EOF
   [[ "$output" == *"test2"* ]]
 }
 
-RECIPE_PATH="${TEST_ENV_PATH}/.draky/env/dev/docker-compose.recipe.yml"
-COMPOSE_PATH="${TEST_ENV_PATH}/.draky/env/dev/docker-compose.yml"
-
 @test "Build compose" {
   _initialize_test_environment
   # Create the recipe.
@@ -263,4 +263,160 @@ EOF
 
   ${DRAKY} env build
   grep -q "$ENTRYPOINT_SCRIPT" "$COMPOSE_PATH"
+}
+
+@test "Custom command is added to the help" {
+  _initialize_test_environment
+  TEST_COMMAND_PATH="${TEST_ENV_PATH}/.draky/testcommand.dk.sh"
+    cat > "${TEST_COMMAND_PATH}" << EOF
+#!/usr/bin/env sh
+EOF
+  ${DRAKY} env up
+  ${DRAKY} -h | grep -q testcommand
+}
+
+@test "User can run custom scripts" {
+  _initialize_test_environment
+
+  TEST_SERVICE=test_service
+
+    # Create the compose file.
+  cat > "$COMPOSE_PATH" << EOF
+services:
+  $TEST_SERVICE:
+    image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
+    command: 'tail -f /dev/null'
+EOF
+  TEST_COMMAND_NAME="testcommand"
+  TEST_COMMAND_PATH="${TEST_ENV_PATH}/.draky/$TEST_COMMAND_NAME.dk.sh"
+  TEST_COMMAND_MESSAGE="test command has been executed"
+
+  cat > "${TEST_COMMAND_PATH}" << EOF
+#!/usr/bin/env sh
+echo "${TEST_COMMAND_MESSAGE}"
+EOF
+  chmod a+x "${TEST_COMMAND_PATH}"
+
+  TEST_SERVICE_COMMAND_NAME="testservicecommand"
+  TEST_SERVICE_COMMAND_PATH="${TEST_ENV_PATH}/.draky/${TEST_SERVICE_COMMAND_NAME}.${TEST_SERVICE}.dk.sh"
+  TEST_SERVICE_COMMAND_MESSAGE="test command inside the service has been executed"
+
+  cat > "${TEST_SERVICE_COMMAND_PATH}" << EOF
+#!/usr/bin/env sh
+echo "${TEST_SERVICE_COMMAND_MESSAGE}"
+EOF
+  chmod a+x "${TEST_SERVICE_COMMAND_PATH}"
+
+  ${DRAKY} env up
+
+  # Test command running on the host
+  ${DRAKY} -h | grep -q ${TEST_COMMAND_NAME}
+  run ${DRAKY} ${TEST_COMMAND_NAME}
+  [[ "$output" == *"${TEST_COMMAND_MESSAGE}"* ]]
+
+  # Test command running inside the service
+  ${DRAKY} -h | grep -q ${TEST_SERVICE_COMMAND_NAME}
+  run ${DRAKY} ${TEST_SERVICE_COMMAND_NAME}
+  [[ "$output" == *"${TEST_SERVICE_COMMAND_MESSAGE}"* ]]
+}
+
+@test "Custom scripts are running in tty" {
+  _initialize_test_environment
+
+  TEST_SERVICE=test_service
+
+    # Create the compose file.
+  cat > "$COMPOSE_PATH" << EOF
+services:
+  $TEST_SERVICE:
+    image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
+    command: 'tail -f /dev/null'
+EOF
+  TEST_COMMAND_NAME="testcommand"
+  TEST_COMMAND_PATH="${TEST_ENV_PATH}/.draky/$TEST_COMMAND_NAME.dk.sh"
+  TEST_COMMAND_MESSAGE="we are running command on host in terminal"
+
+  cat > "${TEST_COMMAND_PATH}" << EOF
+#!/usr/bin/env sh
+if [ -t 0 ]; then
+  echo "${TEST_COMMAND_MESSAGE}"
+fi
+EOF
+  chmod a+x "${TEST_COMMAND_PATH}"
+
+  TEST_SERVICE_COMMAND_NAME="testservicecommand"
+  TEST_SERVICE_COMMAND_PATH="${TEST_ENV_PATH}/.draky/${TEST_SERVICE_COMMAND_NAME}.${TEST_SERVICE}.dk.sh"
+  TEST_SERVICE_COMMAND_MESSAGE="we are running command in service in terminal"
+
+  cat > "${TEST_SERVICE_COMMAND_PATH}" << EOF
+#!/usr/bin/env sh
+if [ -t 0 ]; then
+  echo "${TEST_SERVICE_COMMAND_MESSAGE}"
+fi
+EOF
+  chmod a+x "${TEST_SERVICE_COMMAND_PATH}"
+
+  ${DRAKY} env up
+
+  run ${DRAKY} ${TEST_COMMAND_NAME}
+  [[ "$output" == *"${TEST_COMMAND_MESSAGE}"* ]]
+
+  run ${DRAKY} ${TEST_SERVICE_COMMAND_NAME}
+  [[ "$output" == *"${TEST_SERVICE_COMMAND_MESSAGE}"* ]]
+}
+
+@test "Custom scripts can receive data from stdin" {
+  _initialize_test_environment
+
+  TEST_SERVICE=test_service
+
+    # Create the compose file.
+  cat > "$COMPOSE_PATH" << EOF
+services:
+  $TEST_SERVICE:
+    image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
+    command: 'tail -f /dev/null'
+EOF
+  TEST_COMMAND_NAME="testcommand"
+  TEST_COMMAND_PATH="${TEST_ENV_PATH}/.draky/$TEST_COMMAND_NAME.dk.sh"
+  TEST_COMMAND_STDIN_DATA="stdin data passed to the command running on the host"
+  TEST_COMMAND_MESSAGE="we are not in a terminal when using stdin to pass data to the command running on host"
+
+  cat > "${TEST_COMMAND_PATH}" << EOF
+#!/usr/bin/env sh
+if [ ! -t 0 ]; then
+  echo "${TEST_COMMAND_MESSAGE}"
+fi
+while read line
+do
+  echo "\$line"
+done < /dev/stdin
+EOF
+  chmod a+x "${TEST_COMMAND_PATH}"
+
+  TEST_SERVICE_COMMAND_NAME="testservicecommand"
+  TEST_SERVICE_COMMAND_PATH="${TEST_ENV_PATH}/.draky/${TEST_SERVICE_COMMAND_NAME}.${TEST_SERVICE}.dk.sh"
+  TEST_SERVICE_COMMAND_STDIN_DATA="stdin data passed to the command running inside the service"
+  TEST_SERVICE_COMMAND_MESSAGE="we are not in a terminal when using stdin to pass data to the command running in a service"
+
+  cat > "${TEST_SERVICE_COMMAND_PATH}" << EOF
+#!/usr/bin/env sh
+if [ ! -t 0 ]; then
+  echo "${TEST_SERVICE_COMMAND_MESSAGE}"
+fi
+while read line
+do
+  echo "\$line"
+done < /dev/stdin
+EOF
+  chmod a+x "${TEST_SERVICE_COMMAND_PATH}"
+
+  ${DRAKY} env up
+
+  run bash -c "echo \"${TEST_COMMAND_STDIN_DATA}\" | ${DRAKY} ${TEST_COMMAND_NAME}"
+  [[ "$output" == *"${TEST_COMMAND_MESSAGE}"* ]]
+  [[ "$output" == *"${TEST_COMMAND_STDIN_DATA}"* ]]
+  run bash -c "echo \"${TEST_SERVICE_COMMAND_STDIN_DATA}\" | ${DRAKY} ${TEST_SERVICE_COMMAND_NAME}"
+  [[ "$output" == *"${TEST_SERVICE_COMMAND_MESSAGE}"* ]]
+  [[ "$output" == *"${TEST_SERVICE_COMMAND_STDIN_DATA}"* ]]
 }
