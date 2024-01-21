@@ -3,7 +3,7 @@
 import os
 from importlib import util
 
-from dk.compose_manager import Compose
+from dk.compose_manager import Compose, ComposeRecipe
 from dk.config_manager import ConfigManager
 
 
@@ -27,12 +27,11 @@ class HookManager:
         self.__config: ConfigManager = config
         self.__utils = HookUtils(config)
 
-    def addon_alter_services(self, compose: Compose):
+    def addon_alter_services(self, recipe: ComposeRecipe, compose: Compose) -> None:
         """Allows addons to alter services.
         """
         services = compose.list_services()
         addons = self.__config.get_addons()
-        recipe = compose.get_recipe()
 
         for addon in addons:
 
@@ -42,10 +41,10 @@ class HookManager:
                     continue
 
                 addon_path = addon.path
-                addon_path_absolute =(
-                        self.__config.get_project_config_path() +
-                        os.sep +
-                        os.path.dirname(addon_path)
+                addon_path_absolute = (
+                    self.__config.get_project_config_path() +
+                    os.sep +
+                    os.path.dirname(addon_path)
                 )
 
                 hooks_path = addon_path_absolute + os.sep + 'hooks.py'

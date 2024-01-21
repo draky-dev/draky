@@ -221,8 +221,7 @@ EOF
   cat > "$RECIPE_PATH" << EOF
 services:
   php:
-    service:
-      image: "\${PHP_IMAGE_TEST}"
+    image: "\${PHP_IMAGE_TEST}"
 EOF
   # Give variable a value.
   cat > "${TEST_ENV_PATH}/.draky/variables.dk.yml" << EOF
@@ -233,7 +232,22 @@ EOF
   grep -q "image: php-image" "$COMPOSE_PATH"
 }
 
-@test "Addons can alter services" {
+@test "Build compose: 'draky' property is removed from services" {
+  _initialize_test_environment
+  # Create the recipe.
+  cat > "$RECIPE_PATH" << EOF
+services:
+  php:
+    image: test-image
+    draky:
+      addons: []
+
+EOF
+  ${DRAKY} env build
+  run ! grep -q "draky:" "$COMPOSE_PATH"
+}
+
+@test "Addons: Addons can alter services" {
   _initialize_test_environment
 
   # Create a test addon.
@@ -265,7 +279,7 @@ EOF
   grep -q "$ENTRYPOINT_SCRIPT" "$COMPOSE_PATH"
 }
 
-@test "Custom command is added to the help" {
+@test "Custom commands: Custom command is added to the help" {
   _initialize_test_environment
   TEST_COMMAND_PATH="${TEST_ENV_PATH}/.draky/testcommand.dk.sh"
     cat > "${TEST_COMMAND_PATH}" << EOF
@@ -275,7 +289,7 @@ EOF
   ${DRAKY} -h | grep -q testcommand
 }
 
-@test "User can run custom scripts" {
+@test "Custom commands: User can run custom scripts" {
   _initialize_test_environment
 
   TEST_SERVICE=test_service
@@ -320,7 +334,7 @@ EOF
   [[ "$output" == *"${TEST_SERVICE_COMMAND_MESSAGE}"* ]]
 }
 
-@test "Custom scripts are running in tty" {
+@test "Custom commands: Custom scripts are running in tty" {
   _initialize_test_environment
 
   TEST_SERVICE=test_service
@@ -365,7 +379,7 @@ EOF
   [[ "$output" == *"${TEST_SERVICE_COMMAND_MESSAGE}"* ]]
 }
 
-@test "Custom scripts can receive data from stdin" {
+@test "Custom commands: Custom scripts can receive data from stdin" {
   _initialize_test_environment
 
   TEST_SERVICE=test_service

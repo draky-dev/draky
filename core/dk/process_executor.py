@@ -48,10 +48,10 @@ class ProcessExecutor:
         if os.path.exists(recipe_path):
             with open(recipe_path, "r", encoding='utf8') as f:
                 recipe_content = yaml.safe_load(f)
-            recipe = ComposeRecipe(recipe_content)
-            compose = self.compose_manager.create(recipe, recipe_path, self.__get_compose_path())
+            recipe = ComposeRecipe(recipe_content, recipe_path, self.config.get_env_path())
+            compose = self.compose_manager.create(recipe, self.__get_compose_path())
             compose.set_substituted_variables(substitute_vars)
-            self.hook_manager.addon_alter_services(compose)
+            self.hook_manager.addon_alter_services(recipe, compose)
             self.compose_manager.save(compose)
 
     def env_start(self) -> None:
