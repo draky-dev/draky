@@ -279,6 +279,46 @@ EOF
   grep -q "$ENTRYPOINT_SCRIPT" "$COMPOSE_PATH"
 }
 
+@test "Addons: Addons can alter services even if they are enabled on services being extended" {
+  _initialize_test_environment
+
+  # Create a test addon.
+  ADDON_NAME=test-addon
+  ADDON_PATH="${TEST_ENV_PATH}/.draky/addons/${ADDON_NAME}"
+  ENTRYPOINT_SCRIPT=/test-entrypoint.sh
+  mkdir -p "$ADDON_PATH"
+  # Create the addon config file.
+  cat > "${ADDON_PATH}/${ADDON_NAME}.addon.dk.yml" << EOF
+id: ${ADDON_NAME}
+EOF
+  cat > "${ADDON_PATH}/hooks.py" << EOF
+def alter_service(name: str, service: dict, utils: object, addon: dict):
+    service['entrypoint'] = ['$ENTRYPOINT_SCRIPT']
+EOF
+
+  # Create the recipe.
+  cat > "$RECIPE_PATH" << EOF
+services:
+  php:
+    extends:
+      file: ../../services/php/services.yml
+      service: php
+EOF
+  PHP_SERVICE_PATH="${TEST_ENV_PATH}/.draky/services/php"
+  mkdir -p ${PHP_SERVICE_PATH}
+  # Create an external service file.
+  cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
+services:
+  php:
+    image: php-image
+    draky:
+      addons:
+        - ${ADDON_NAME}
+EOF
+  ${DRAKY} env build
+  grep -q "${ENTRYPOINT_SCRIPT}" "$COMPOSE_PATH"
+}
+
 @test "Custom commands: Custom command is added to the help" {
   _initialize_test_environment
   TEST_COMMAND_PATH="${TEST_ENV_PATH}/.draky/testcommand.dk.sh"

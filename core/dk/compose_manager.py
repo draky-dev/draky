@@ -77,7 +77,8 @@ class ComposeRecipe:
     def get_addons(self, service: str) -> list[str]:
         """Returns a list of addons for the given service.
         """
-        services = self.get_services()
+        compose = self.__to_compose_dict(cleaned=False)
+        services = compose['services']
         if service not in services:
             raise ValueError(f"Unknown service '{service}'")
 
@@ -85,16 +86,36 @@ class ComposeRecipe:
             return []
 
         return services[service]['draky']['addons']\
-            if 'addons' in services[service]['draky'] else []
+                    if 'addons' in services[service]['draky'] else []
 
     def get_services(self) -> dict:
         """Returns the services defined by the recipe.
         """
         return self.__content['services']
 
-    def to_compose(self, compose_path: str, resolve_vars_in_string: callable) -> Compose:  # pylint: disable=too-many-branches
+    def to_compose(
+            self,
+            compose_path: str,
+            resolve_vars_in_string: callable,
+            cleaned: bool = True,
+    ) -> Compose:
         """Converts recipe into the compose file.
         """
+        compose_dict = self.__to_compose_dict(cleaned)
+
+        return Compose(compose_path, compose_dict, resolve_vars_in_string)
+
+    def __clean_compose(self, compose: dict) -> dict:
+        """Removes draky-specific properties from the service's definition.
+        """
+        if 'services' in compose:
+            for service in compose['services']:
+                if 'draky' in compose['services'][service]:
+                    del compose['services'][service]['draky']
+
+        return compose
+
+    def __to_compose_dict(self, cleaned: bool = True):
         compose_dict = copy.deepcopy(self.__content)
         services = compose_dict['services']
 
@@ -107,16 +128,8 @@ class ComposeRecipe:
             # Validate the basic structure.
             if 'extends' in service_data:
                 extends = service_data['extends']
-                if not isinstance(extends, dict):
-                    raise ValueError(
-                        f"Error in the '{service_name}' service. 'extends' key has to be a "
-                        f"dictionary."
-                    )
-                if 'file' not in extends:
-                    raise ValueError(
-                        f"Error in the '{service_name}' service. The 'file' value is required if "
-                        f"the service extends another service."
-                    )
+                self.__validate_extends(service_name, extends)
+
                 remote_file_path = os.path.dirname(self.recipe_path) + os.sep + extends['file']
                 if not isinstance(remote_file_path, str):
                     raise ValueError(
@@ -139,17 +152,7 @@ class ComposeRecipe:
                 with open(remote_file_path, "r", encoding='utf8') as f:
                     remote_file_dict = yaml.safe_load(f)
 
-                if 'services' not in remote_file_dict:
-                    raise ValueError(
-                        f"Error in the '{service_name}' service. The file '{remote_file_path}' "
-                        f"doesn't have a 'services' key."
-                    )
-
-                if remote_file_service not in remote_file_dict['services']:
-                    raise ValueError(
-                        f"Error in the '{service_name}' service. The file '{remote_file_path}' "
-                        f"doesn't have a '{remote_file_service}' service."
-                    )
+                self.__validate_service_in_extended_compose(remote_file_service, remote_file_dict)
 
                 if not isinstance(remote_file_dict['services'][remote_file_service], dict):
                     raise ValueError(
@@ -175,17 +178,11 @@ class ComposeRecipe:
                             else self.__volume_convert_relative(volume, remote_file_path)
 
             compose_dict['services'][service_name] = service
-        return Compose(compose_path, self.__clean_compose(compose_dict), resolve_vars_in_string)
 
-    def __clean_compose(self, compose: dict) -> dict:
-        """Removes draky-specific properties from the service's definition.
-        """
-        if 'services' in compose:
-            for service in compose['services']:
-                if 'draky' in compose['services'][service]:
-                    del compose['services'][service]['draky']
+        if cleaned:
+            return self.__clean_compose(compose_dict)
 
-        return compose
+        return compose_dict
 
     def __volume_is_absolute(self, volume: str) -> bool:
         """Checks if volume is absolute.
@@ -208,6 +205,22 @@ class ComposeRecipe:
             )
             sys.exit(1)
 
+    def __validate_extends(self, service_name: str,  extends: dict) -> None:
+        if not isinstance(extends, dict):
+            raise ValueError(
+                f"Error in the '{service_name}' service. 'extends' key has to be a "
+                f"dictionary."
+            )
+        if 'file' not in extends:
+            raise ValueError(
+                f"Error in the '{service_name}' service. The 'file' value is required if "
+                f"the service extends another service."
+            )
+
+    def __validate_service_in_extended_compose(self, service_name: str, compose: dict) -> None:
+        if 'services' not in compose or service_name not in compose['services']:
+            raise ValueError(f"Error in the '{service_name}' service. It's missing in the "
+                             f"extended compose file.")
 
 class ComposeManager:
     """This class is responsible for building a compose file based on the given recipe.
