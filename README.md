@@ -9,4 +9,5 @@ easier, instead of hiding environment configuration behind opaque layers of abst
 Documentation is available at [https://draky.dev](https://draky.dev).
 
 # Requirements:
-- docker buildx
+- bash
+- docker
