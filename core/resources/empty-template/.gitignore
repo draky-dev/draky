@@ -1,2 +1,2 @@
 *local.dk.yml
-.env
+env/*/.env
