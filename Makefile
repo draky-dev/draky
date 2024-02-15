@@ -1,8 +1,9 @@
 SHORT_NAME = draky
 NAME = ghcr.io/draky-dev/${SHORT_NAME}
+VERSION_DEFAULT = local-build
 # Let's handle situation where VERSION is passed as empty. That'll allow us to simplify the pipeline.
 ifndef VERSION
-	override VERSION = local-build
+	override VERSION = ${VERSION_DEFAULT}
 endif
 
 # Filter functional tests. Set this variable to regex matching the names of tests you want to run.
@@ -38,6 +39,7 @@ build:
 	docker save -o ${DIST_PATH}/${SHORT_NAME}-${VER}.image.tar ${NAME}:${VER}
 	TEMPLATE_DRAKY_VERSION=${VER} TEMPLATE_DRAKY_NAME=${NAME} ./bin/template-renderer.sh -t ./bin/templates/draky.template -o ${DIST_BIN_PATH}/draky
 	find ${DIST_BIN_PATH} -type f -exec chmod 755 {} \;
+	[ "${VERSION}" == "${VERSION_DEFAULT}" ] || echo "When deploying the new release, remember to push the image first!"
 
 build-test:
 	cd ${ROOT}/tests
