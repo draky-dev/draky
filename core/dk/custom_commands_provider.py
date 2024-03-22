@@ -61,11 +61,14 @@ class CustomCommandsProvider:
 
             # Find yaml companion.
             help_text = ''
+            user: str = '0'
             try:
                 with open(full_path + ".yml", "r", encoding='utf8') as stream:
                     yaml_companion = yaml.safe_load(stream)
-                    help_text = yaml_companion['help']\
-                        if yaml_companion and 'help' in yaml_companion else ''
+                    if 'help' in yaml_companion:
+                        help_text = str(yaml_companion['help'])
+                    if 'user' in yaml_companion:
+                        user = str(yaml_companion['user'])
             except (IOError, yaml.YAMLError):
                 pass
 
@@ -75,6 +78,7 @@ class CustomCommandsProvider:
                     help=help_text,
                     service=service,
                     cmd=full_path,
+                    user=user
                 )
             )
 

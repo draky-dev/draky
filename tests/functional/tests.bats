@@ -516,3 +516,64 @@ EOF
   [[ "$output" == *"${TEST_SERVICE_COMMAND_MESSAGE}"* ]]
   [[ "$output" == *"${TEST_SERVICE_COMMAND_STDIN_DATA}"* ]]
 }
+
+@test "Custom commands: command is run inside the container as a specified user by id" {
+  _initialize_test_environment
+  TEST_SERVICE=test_service
+  USER_ID=1100
+    # Create the compose file.
+  cat > "$COMPOSE_PATH" << EOF
+services:
+  $TEST_SERVICE:
+    image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
+    command: 'tail -f /dev/null'
+EOF
+  TEST_COMMAND_NAME="testcommand"
+  TEST_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/$TEST_COMMAND_NAME.$TEST_SERVICE.dk.sh"
+  TEST_COMMAND_COMPANION_PATH="${TEST_COMMAND_PATH}.yml"
+
+  cat > "${TEST_COMMAND_PATH}" << EOF
+#!/usr/bin/env sh
+id -u
+EOF
+  chmod a+x "${TEST_COMMAND_PATH}"
+
+  cat > "${TEST_COMMAND_COMPANION_PATH}" << EOF
+user: ${USER_ID}
+EOF
+
+  ${DRAKY} env up
+  run "${DRAKY}" "${TEST_COMMAND_NAME}"
+  [[ "$output" == *"${USER_ID}"* ]]
+}
+
+@test "Custom commands: command is run inside the container as a specified user by name" {
+  _initialize_test_environment
+  TEST_SERVICE=test_service
+  USER=bin
+    # Create the compose file.
+  cat > "$COMPOSE_PATH" << EOF
+services:
+  $TEST_SERVICE:
+    image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
+    command: 'tail -f /dev/null'
+EOF
+  TEST_COMMAND_NAME="testcommand"
+  TEST_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/$TEST_COMMAND_NAME.$TEST_SERVICE.dk.sh"
+  TEST_COMMAND_COMPANION_PATH="${TEST_COMMAND_PATH}.yml"
+
+  cat > "${TEST_COMMAND_PATH}" << EOF
+#!/usr/bin/env sh
+id
+EOF
+  chmod a+x "${TEST_COMMAND_PATH}"
+
+  cat > "${TEST_COMMAND_COMPANION_PATH}" << EOF
+user: ${USER}
+EOF
+
+  ${DRAKY} env up
+  run "${DRAKY}" "${TEST_COMMAND_NAME}"
+  echo "$output"
+  [[ "$output" == *"${USER}"* ]]
+}

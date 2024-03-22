@@ -13,6 +13,7 @@ class Flag:
     help: str
     action: str = field(default_factory=lambda: 'store')
 
+
 @dataclass(kw_only=True)
 class EmptyCommand:
     """Dataclass representing command without any callback.
@@ -22,13 +23,11 @@ class EmptyCommand:
     flags: list[Flag] = field(default_factory=lambda: [])
 
 
-
 @dataclass(kw_only=True)
 class CallableCommand(EmptyCommand):
     """Dataclass representing a command.
     """
     callback: Callable[[list], None]|None
-
 
 
 @dataclass(kw_only=True)
@@ -37,3 +36,4 @@ class ServiceCommand(EmptyCommand):
     """
     service: str
     cmd: str
+    user: str = '0'

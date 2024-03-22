@@ -8,6 +8,7 @@ from subprocess import Popen, PIPE, run, DEVNULL
 
 import yaml
 
+from dk.command import ServiceCommand
 from dk.compose_manager import ComposeManager, ComposeRecipe
 from dk.config_manager import ConfigManager
 from dk.hook_manager import HookManager
@@ -137,19 +138,19 @@ class ProcessExecutor:
 
     def execute_inside_container(
             self,
-            service: str,
-            script_path: str,
+            custom_command: ServiceCommand,
             reminder_args: list,
             variables=None
     ) -> None:
         """Executes given script in a given service's container.
 
         :param variables:
-        :param service:
-        :param script_path:
+        :param custom_command:
         :param reminder_args:
         :return:
         """
+        service = custom_command.service
+        script_path = custom_command.cmd
         script_path_with_draky_root = get_path_up_to_project_root(script_path)
         if variables is None:
             variables = {}
@@ -171,7 +172,7 @@ class ProcessExecutor:
 
         # Run the script by using docker's "exec" command.
         command = self.get_command_base()
-        command.extend(['exec'])
+        command.extend(['exec', '-u', custom_command.user])
 
         # Pass the variables to the container running the command.
         for var in variables:
