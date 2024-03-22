@@ -89,3 +89,10 @@ test-lint:
 
 cleanup:
 	docker rmi "${NAME}:${VER}"
+
+deploy-image:
+	if [ "${VERSION}" == "${VERSION_DEFAULT}" ]; then \
+	  docker push ${NAME}:${VER}; \
+  	  else \
+  	  echo "Cannot deploy the '${VERSION_DEFAULT}' version"; \
+	fi;
