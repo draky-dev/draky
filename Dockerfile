@@ -12,9 +12,8 @@ RUN apk add --no-cache \
     docker-cli \
     docker-cli-compose \
     python3 \
-    py3-dotenv \
-    py3-yaml \
-    py3-colorama
+    py3-pip
+RUN pip3 install -r "${DK_PATH}/dk/requirements.txt"
 
 VOLUME '/global-config' '/opt/dk-core'
 
