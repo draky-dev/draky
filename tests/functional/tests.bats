@@ -251,9 +251,41 @@ services:
     image: php-image
     volumes:
       - ./test-volume:/test-volume
+      - type: volume
+        source: ./test-2-volume
+        target: /test-2-volume
 EOF
   ${DRAKY} env build
   grep -q "../../services/php/./test-volume" "$COMPOSE_PATH"
+  # Test if dict volume definitions are also handled correctly.
+  grep -q "source: ../../services/php/./test-2-volume" "$COMPOSE_PATH"
+}
+
+@test "Build compose: named volumes are not converted" {
+  _initialize_test_environment
+  NAMED_VOLUME_1=named_volume
+  # Create the recipe.
+  cat > "$RECIPE_PATH" << EOF
+services:
+  php:
+    extends:
+      file: ../../services/php/services.yml
+      service: php
+volumes:
+  ${NAMED_VOLUME_1}:
+EOF
+  PHP_SERVICE_PATH="${TEST_PROJECT_PATH}/.draky/services/php"
+  mkdir -p ${PHP_SERVICE_PATH}
+  # Create an external service file.
+  cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
+services:
+  php:
+    image: php-image
+    volumes:
+      - ${NAMED_VOLUME_1}:/test-volume
+EOF
+  ${DRAKY} env build
+  grep -q -- "- $NAMED_VOLUME_1:" "$COMPOSE_PATH"
 }
 
 @test "Build compose: variable substitution flag" {

@@ -177,9 +177,10 @@ class ComposeRecipe:
             if 'volumes' in service and isinstance(service['volumes'], typing.List):
                 for i, _ in enumerate(service['volumes']):
                     volume = service['volumes'][i]
-                    service['volumes'][i] =\
-                        volume if self.__volume_is_absolute(volume)\
-                            else self.__volume_convert_relative(volume, remote_file_path)
+                    if not self.__volume_is_named(volume, compose_dict):
+                        service['volumes'][i] =\
+                            volume if self.__volume_is_absolute(volume)\
+                                else self.__volume_convert_relative(volume, remote_file_path)
 
             compose_dict['services'][service_name] = service
 
@@ -188,17 +189,39 @@ class ComposeRecipe:
 
         return compose_dict
 
-    def __volume_is_absolute(self, volume: str) -> bool:
+    def __volume_is_absolute(self, volume: str|dict) -> bool:
         """Checks if volume is absolute.
         """
+        path = volume if isinstance(volume, str) else volume['source']
         # If volume starts with a variable, then also assume it's absolute.
-        return volume.startswith(('/', '${'))
+        return path.startswith(('/', '${'))
 
-    def __volume_convert_relative(self, volume: str, service_path: str) -> str:
+    def __volume_is_named(self, volume: str|dict, compose: dict) -> bool:
+        """Checks if volume is named.
+        """
+        if isinstance(volume, str):
+            volume_splitted = volume.split(':')
+            if len(volume_splitted) == 0:
+                raise ValueError("")
+            path = volume.split(':')[0]
+        else:
+            path = volume['source']
+
+        if 'volumes' in compose:
+            if not isinstance(compose['volumes'], dict):
+                return False
+            if path in compose['volumes'].keys():
+                return True
+        return False
+
+    def __volume_convert_relative(self, volume: str|dict, service_path: str) -> str|dict:
         """Change the relative path to keep it relative to the service it came from.
         """
         service_path = os.path.dirname(service_path).replace(self.__env_path + os.sep, '')
-        return f"{service_path}/{volume}"
+        if isinstance(volume, str):
+            return f"{service_path}/{volume}"
+        volume['source'] = f"{service_path}/{volume['source']}"
+        return volume
 
     def __validate_recipe(self, content: dict):
         """Validates the recipe's content.
