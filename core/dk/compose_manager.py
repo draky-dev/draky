@@ -7,6 +7,7 @@ import copy
 
 import yaml
 from colorama import Fore, Style
+from packaging import version
 
 from dk.config_manager import ConfigManager
 
@@ -123,6 +124,10 @@ class ComposeRecipe:
         compose_dict = copy.deepcopy(self.__content)
         services = compose_dict['services']
 
+        extended_files: dict = self.__gather_extended_files(services)
+        compose_dict = self.__merge_top_level_values(compose_dict, extended_files)
+
+        # Handle services.
         for service_name in services:
             service_data = services[service_name]
 
@@ -132,20 +137,7 @@ class ComposeRecipe:
             # Validate the basic structure.
             if 'extends' in service_data:
                 extends = service_data['extends']
-                self.__validate_extends(service_name, extends)
-
                 remote_file_path = os.path.dirname(self.recipe_path) + os.sep + extends['file']
-                if not isinstance(remote_file_path, str):
-                    raise ValueError(
-                        f"Error in the '{service_name}' service. The 'file' value has to be a "
-                        f"string."
-                    )
-
-                if 'service' not in extends:
-                    raise ValueError(
-                        f"Error in the '{service_name}' service. The 'service' value is required "
-                        f"if the service extends another service."
-                    )
                 remote_file_service = extends['service']
                 if not isinstance(remote_file_service, str):
                     raise ValueError(
@@ -153,8 +145,11 @@ class ComposeRecipe:
                         f"a string."
                     )
 
-                with open(remote_file_path, "r", encoding='utf8') as f:
-                    remote_file_dict = yaml.safe_load(f)
+                if remote_file_path not in extended_files:
+                    with open(remote_file_path, "r", encoding='utf8') as f:
+                        extended_files[remote_file_path] = yaml.safe_load(f)
+
+                remote_file_dict = extended_files[remote_file_path]
 
                 self.__validate_service_in_extended_compose(remote_file_service, remote_file_dict)
 
@@ -189,6 +184,61 @@ class ComposeRecipe:
 
         return compose_dict
 
+    def __gather_extended_files(self, services: dict) -> dict:
+        """Gathers the values of all files extended in the recipe.
+        """
+
+        extended_files: dict = {}
+
+        # Gather the extended files.
+        for service_name in services:
+            service_data = services[service_name]
+
+            # Validate the basic structure.
+            if 'extends' in service_data:
+                extends = service_data['extends']
+                self.__validate_extends(service_name, extends)
+
+                remote_file_path = os.path.dirname(self.recipe_path) + os.sep + extends['file']
+                if not isinstance(remote_file_path, str):
+                    raise ValueError(
+                        f"Error in the '{service_name}' service. The 'file' value has to be a "
+                        f"string."
+                    )
+
+                if 'service' not in extends:
+                    raise ValueError(
+                        f"Error in the '{service_name}' service. The 'service' value is required "
+                        f"if the service extends another service."
+                    )
+
+                if remote_file_path not in extended_files:
+                    with open(remote_file_path, "r", encoding='utf8') as f:
+                        extended_files[remote_file_path] = yaml.safe_load(f)
+
+        return extended_files
+
+    def __merge_top_level_values(self, compose: dict, extended_files: dict) -> dict:
+        """Merges values from the extended files into the resulting compose file.
+        """
+        # Merge other top level values from the extended files into the compose file.
+        for _, extended_file in extended_files.items():
+            for top_level_key in extended_file:
+                # Services have been already handled.
+                if top_level_key == 'services':
+                    continue
+
+                top_level_value = extended_file[top_level_key]
+                if top_level_key not in compose:
+                    compose[top_level_key] = top_level_value
+                else:
+                    compose[top_level_key] = self.__merge_top_level_value(
+                        top_level_key,
+                        top_level_value,
+                        compose[top_level_key],
+                    )
+        return compose
+
     def __volume_is_absolute(self, volume: str|dict) -> bool:
         """Checks if volume is absolute.
         """
@@ -202,7 +252,7 @@ class ComposeRecipe:
         if isinstance(volume, str):
             volume_splitted = volume.split(':')
             if len(volume_splitted) == 0:
-                raise ValueError("")
+                raise ValueError("Incorrect volumes string format")
             path = volume.split(':')[0]
         else:
             path = volume['source']
@@ -248,6 +298,15 @@ class ComposeRecipe:
         if 'services' not in compose or service_name not in compose['services']:
             raise ValueError(f"Error in the '{service_name}' service. It's missing in the "
                              f"extended compose file.")
+
+    def __merge_top_level_value(self, name: str, new_value, existing_value):
+        """Merges top-level compose values.
+        """
+        # We want to get the highest version.
+        if name == 'version':
+            return new_value if version.parse(new_value) > version.parse(existing_value)\
+                else existing_value
+        return existing_value | new_value
 
 class ComposeManager:
     """This class is responsible for building a compose file based on the given recipe.

@@ -288,6 +288,71 @@ EOF
   grep -q -- "- $NAMED_VOLUME_1:" "$COMPOSE_PATH"
 }
 
+@test "Build compose: named volumes are carried over from the extended files" {
+  _initialize_test_environment
+  NAMED_VOLUME_1=named_volume
+  # Create the recipe.
+  cat > "$RECIPE_PATH" << EOF
+services:
+  php:
+    extends:
+      file: ../../services/php/services.yml
+      service: php
+EOF
+  PHP_SERVICE_PATH="${TEST_PROJECT_PATH}/.draky/services/php"
+  mkdir -p ${PHP_SERVICE_PATH}
+  # Create an external service file.
+  cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
+services:
+  php:
+    image: php-image
+    volumes:
+      - ${NAMED_VOLUME_1}:/test-volume
+volumes:
+  ${NAMED_VOLUME_1}:
+EOF
+  ${DRAKY} env build
+  grep -q -- "- $NAMED_VOLUME_1:" "$COMPOSE_PATH"
+}
+
+@test "Build compose: the highest version is carried over from the extended files" {
+  _initialize_test_environment
+  NAMED_VOLUME_1=named_volume
+  # Create the recipe.
+  cat > "$RECIPE_PATH" << EOF
+services:
+  php:
+    extends:
+      file: ../../services/php/services.yml
+      service: php
+  nginx:
+    extends:
+      file: ../../services/nginx/services.yml
+      service: nginx
+EOF
+  PHP_SERVICE_PATH="${TEST_PROJECT_PATH}/.draky/services/php"
+  mkdir -p ${PHP_SERVICE_PATH}
+  # Create an external service file.
+  cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
+version: '3.4'
+services:
+  php:
+    image: php-image
+EOF
+  NGINX_SERVICE_PATH="${TEST_PROJECT_PATH}/.draky/services/nginx"
+  mkdir -p ${NGINX_SERVICE_PATH}
+  # Create an external service file.
+  cat > "${NGINX_SERVICE_PATH}/services.yml" << EOF
+version: '3.1'
+services:
+  nginx:
+    image: nginx-image
+EOF
+
+  ${DRAKY} env build
+  grep -q -- "version: '3.4'" "$COMPOSE_PATH"
+}
+
 @test "Build compose: variable substitution flag" {
   _initialize_test_environment
   # Create the recipe.
