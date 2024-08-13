@@ -5,10 +5,11 @@ IMAGE_NAME=$TEMPLATE_DRAKY_NAME
 DRAKY_VERSION=$TEMPLATE_DRAKY_VERSION
 PROJECT_CONFIG_DIR=.draky
 CORE_GLOBAL_CONFIG_PATH=/global-config
+DOCKER_SOCKET=/var/run/docker.sock
 
 DRAKY_HOST_UID="${UID}"
 DRAKY_HOST_GID="$(id -g)"
-DRAKY_GID="$(stat -c '%g' /var/run/docker.sock)"
+DRAKY_GID="$(getent group "$(ls -ld $DOCKER_SOCKET | awk '{print $4}')" | cut -d: -f3)"
 
 COLOR_RESET='\033[0m'
 #COLOR_BLUE='\033[0;94m'
