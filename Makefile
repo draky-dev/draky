@@ -97,8 +97,6 @@ deploy-image:
   	  echo "Cannot deploy the '${VERSION_DEFAULT}' version"; \
   	  exit; \
 	fi;
-	[ ! -d "${DIST_PATH}" ] || rm -r ${DIST_PATH}
-	mkdir -p ${DIST_BIN_PATH}
 	docker buildx create --use --name docker-container
 	docker buildx build -f ${ROOT}/Dockerfile --provenance=false --rm --platform ${PLATFORMS} -t ${NAME}:${VER} --output "type=registry" .
 	docker buildx rm docker-container
