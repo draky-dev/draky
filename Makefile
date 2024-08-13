@@ -18,6 +18,8 @@ DIST_BIN_PATH = ${DIST_PATH}/bin
 DRAKY_BIN_PATH = ${DIST_BIN_PATH}/draky
 TESTS_PATH = ${ROOT}/tests
 
+PLATFORMS=linux/arm64,linux/amd64
+
 # Version processed.
 VER = $(shell echo ${VERSION} | sed 's/^v//g')
 
@@ -93,6 +95,10 @@ cleanup:
 deploy-image:
 	if [ "${VERSION}" == "${VERSION_DEFAULT}" ]; then \
   	  echo "Cannot deploy the '${VERSION_DEFAULT}' version"; \
-  	  else \
-  	  docker push ${NAME}:${VER}; \
+  	  exit; \
 	fi;
+	[ ! -d "${DIST_PATH}" ] || rm -r ${DIST_PATH}
+	mkdir -p ${DIST_BIN_PATH}
+	docker buildx create --use --name docker-container
+	docker buildx build -f ${ROOT}/Dockerfile --provenance=false --rm --platform ${PLATFORMS} -t ${NAME}:${VER} --output "type=registry" .
+	docker buildx rm docker-container
