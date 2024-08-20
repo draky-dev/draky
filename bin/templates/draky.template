@@ -9,7 +9,7 @@ DOCKER_SOCKET=/var/run/docker.sock
 
 DRAKY_HOST_UID="${UID}"
 DRAKY_HOST_GID="$(id -g)"
-DRAKY_GID="$(getent group "$(ls -ld $DOCKER_SOCKET | awk '{print $4}')" | cut -d: -f3)"
+DRAKY_GID="$(grep -e "^$(ls -ld $DOCKER_SOCKET | awk '{print $4}')" < /etc/group | cut -d: -f3)"
 
 COLOR_RESET='\033[0m'
 #COLOR_BLUE='\033[0;94m'
@@ -45,7 +45,7 @@ start_core() {
     local ARGS=(
       --name "$CONTAINER_NAME"
       --group-add="$DRAKY_GID"
-      -v /var/run/docker.sock:/var/run/docker.sock
+      -v "$DOCKER_SOCKET:/var/run/docker.sock"
       -v "$HOST_GLOBAL_CONFIG_PATH:$CORE_GLOBAL_CONFIG_PATH"
       -e "DRAKY_VERSION=$DRAKY_VERSION"
       -e "DRAKY_GLOBAL_CONFIG_ROOT=$CORE_GLOBAL_CONFIG_PATH"
