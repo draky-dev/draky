@@ -104,10 +104,11 @@ else:
     variables = config_manager.get_vars()
     if custom_command.service is None:
         command = [custom_command.cmd] + reminder_args
-        process_executor.execute(command, variables=variables)
+        exit_code = process_executor.execute(command, variables=variables)
     else:
-        process_executor.execute_inside_container(
+        exit_code = process_executor.execute_inside_container(
             custom_command,
             reminder_args,
             variables
         )
+    sys.exit(exit_code)

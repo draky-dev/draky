@@ -513,6 +513,50 @@ EOF
   [[ "$output" == *"${TEST_SERVICE_COMMAND_MESSAGE}"* ]]
 }
 
+@test "Custom commands: Passthrough exit code to the host" {
+  _initialize_test_environment
+
+  TEST_SERVICE=test_service
+
+    # Create the compose file.
+  cat > "$COMPOSE_PATH" << EOF
+services:
+  $TEST_SERVICE:
+    image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
+    command: 'tail -f /dev/null'
+EOF
+  TEST_COMMAND_NAME="testcommand"
+  TEST_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/$TEST_COMMAND_NAME.dk.sh"
+  ERROR_CODE=11
+
+  cat > "${TEST_COMMAND_PATH}" << EOF
+#!/usr/bin/env sh
+exit $ERROR_CODE
+EOF
+  chmod a+x "${TEST_COMMAND_PATH}"
+
+  TEST_SERVICE_COMMAND_NAME="testservicecommand"
+  TEST_SERVICE_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/${TEST_SERVICE_COMMAND_NAME}.${TEST_SERVICE}.dk.sh"
+
+  cat > "${TEST_SERVICE_COMMAND_PATH}" << EOF
+#!/usr/bin/env sh
+exit $ERROR_CODE
+EOF
+  chmod a+x "${TEST_SERVICE_COMMAND_PATH}"
+
+  ${DRAKY} env up
+
+  # Test command running on the host
+  ${DRAKY} -h | grep -q ${TEST_COMMAND_NAME}
+  run ${DRAKY} ${TEST_COMMAND_NAME}
+  [[ "$status" == "${ERROR_CODE}" ]]
+
+  # Test command running inside the service
+  ${DRAKY} -h | grep -q ${TEST_SERVICE_COMMAND_NAME}
+  run ${DRAKY} ${TEST_SERVICE_COMMAND_NAME}
+  [[ "$status" == "${ERROR_CODE}" ]]
+}
+
 @test "Custom commands: Custom scripts are running in tty" {
   _initialize_test_environment
 

@@ -94,7 +94,7 @@ class ProcessExecutor:
             variables: dict = None,
             pass_stdin: bool = False,
             container: bool = False,
-    ) -> None:
+    ) -> int:
         """Executes given command.
         """
         if variables is None:
@@ -109,7 +109,8 @@ class ProcessExecutor:
         # the container, or on the host.
         # @todo Figure out why that's the case and write an explanation here.
         stdin = sys.stdin if pass_stdin else DEVNULL if container else None
-        run(command, check=False, stdin=stdin, env=variables)
+        result = run(command, check=False, stdin=stdin, env=variables)
+        return result.returncode
 
     def execute_pipe(
             self,
@@ -141,7 +142,7 @@ class ProcessExecutor:
             custom_command: ServiceCommand,
             reminder_args: list,
             variables=None
-    ) -> None:
+    ) -> int:
         """Executes given script in a given service's container.
 
         :param variables:
@@ -181,7 +182,7 @@ class ProcessExecutor:
             command.extend(['-T'])
         command.extend([service, dest])
         command.extend(reminder_args)
-        self.execute(command, pass_stdin=True, container=True)
+        return self.execute(command, pass_stdin=True, container=True)
 
     def __get_recipe_path(self) -> str:
         return f"{self.config.get_env_path()}/docker-compose.recipe.yml"
