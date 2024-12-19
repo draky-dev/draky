@@ -261,6 +261,30 @@ EOF
   grep -q "source: ../../services/php/./test-2-volume" "$COMPOSE_PATH"
 }
 
+@test "Build compose: dockerfile paths are converted" {
+  _initialize_test_environment
+  # Create the recipe.
+  cat > "$RECIPE_PATH" << EOF
+services:
+  php:
+    extends:
+      file: ../../services/php/services.yml
+      service: php
+EOF
+  PHP_SERVICE_PATH="${TEST_PROJECT_PATH}/.draky/services/php"
+  mkdir -p ${PHP_SERVICE_PATH}
+  # Create an external service file.
+  cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
+services:
+  php:
+    image: php-image
+    build:
+      dockerfile: .
+EOF
+  ${DRAKY} env build
+  grep -q "../../services/php/." "$COMPOSE_PATH"
+}
+
 @test "Build compose: named volumes are not converted" {
   _initialize_test_environment
   NAMED_VOLUME_1=named_volume

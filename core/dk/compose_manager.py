@@ -166,16 +166,8 @@ class ComposeRecipe:
             if not service:
                 service = service_data
 
-            # If we are getting the service data from an external file, we need to modify
-            # all volumes, so they would still reference the original locations, because the
-            # resulting compose file will be in a different location.
-            if 'volumes' in service and isinstance(service['volumes'], typing.List):
-                for i, _ in enumerate(service['volumes']):
-                    volume = service['volumes'][i]
-                    if not self.__volume_is_named(volume, compose_dict):
-                        service['volumes'][i] =\
-                            volume if self.__volume_is_absolute(volume)\
-                                else self.__volume_convert_relative(volume, remote_file_path)
+            service = self.__convert_paths_in_service(service, compose_dict, remote_file_path)
+            print(service)
 
             compose_dict['services'][service_name] = service
 
@@ -183,6 +175,33 @@ class ComposeRecipe:
             return self.__clean_compose(compose_dict)
 
         return compose_dict
+
+    def __convert_paths_in_service(
+            self,
+            service: dict,
+            compose_dict: dict,
+            remote_file_path: str,
+    ) -> dict:
+        # If we are getting the service data from an external file, we need to modify
+        # all volumes, so they would still reference the original locations, because the
+        # resulting compose file will be in a different location.
+        if 'volumes' in service and isinstance(service['volumes'], typing.List):
+            for i, _ in enumerate(service['volumes']):
+                volume = service['volumes'][i]
+                if not self.__volume_is_named(volume, compose_dict):
+                    service['volumes'][i] =\
+                        volume if self.__volume_is_absolute(volume)\
+                            else self.__volume_convert_relative(volume, remote_file_path)
+
+        if 'build' in service and isinstance(service['build'], dict):
+            build = service['build']
+            if 'dockerfile' in build and isinstance(build['dockerfile'], str):
+                dockerfile_path = build['dockerfile']
+                build['dockerfile'] =\
+                  dockerfile_path if self.__path_is_absolute(dockerfile_path)\
+                    else self.__path_convert_relative(dockerfile_path, remote_file_path)
+
+        return service
 
     def __gather_extended_files(self, services: dict) -> dict:
         """Gathers the values of all files extended in the recipe.
@@ -243,8 +262,7 @@ class ComposeRecipe:
         """Checks if volume is absolute.
         """
         path = volume if isinstance(volume, str) else volume['source']
-        # If volume starts with a variable, then also assume it's absolute.
-        return path.startswith(('/', '${'))
+        return self.__path_is_absolute(path)
 
     def __volume_is_named(self, volume: str|dict, compose: dict) -> bool:
         """Checks if volume is named.
@@ -267,11 +285,18 @@ class ComposeRecipe:
     def __volume_convert_relative(self, volume: str|dict, service_path: str) -> str|dict:
         """Change the relative path to keep it relative to the service it came from.
         """
-        service_path = os.path.dirname(service_path).replace(self.__env_path + os.sep, '')
         if isinstance(volume, str):
-            return f"{service_path}/{volume}"
-        volume['source'] = f"{service_path}/{volume['source']}"
+            return self.__path_convert_relative(volume, service_path)
+        volume['source'] = self.__path_convert_relative(volume['source'], service_path)
         return volume
+
+    def __path_convert_relative(self, path: str, service_path: str) -> str:
+        return os.path.dirname(service_path).replace(self.__env_path + os.sep, '')\
+                + os.sep + path
+
+    def __path_is_absolute(self, path: str) -> bool:
+        # If path starts with a variable, then also assume it's absolute.
+        return path.startswith(('/', '${'))
 
     def __validate_recipe(self, content: dict):
         """Validates the recipe's content.
