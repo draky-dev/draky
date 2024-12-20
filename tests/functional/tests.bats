@@ -6,14 +6,17 @@ TEST_PROJECT_PATH="/draky-test-environment"
 ENV_PATH="${TEST_PROJECT_PATH}/.draky/env/dev"
 RECIPE_PATH="${ENV_PATH}/docker-compose.recipe.yml"
 COMPOSE_PATH="${ENV_PATH}/docker-compose.yml"
+HOST_STORAGE_PATH="/storage"
 
 setup() {
   mkdir -p "${TEST_PROJECT_PATH}"
+  mkdir -p "${HOST_STORAGE_PATH}"
 }
 
 teardown() {
   ${DRAKY} env down
   rm -r "${TEST_PROJECT_PATH}"
+  rm -r "${HOST_STORAGE_PATH}"
 }
 
 _initialize_test_environment() {
@@ -496,6 +499,7 @@ EOF
   _initialize_test_environment
 
   TEST_SERVICE=test_service
+  HOST_FILE=$HOST_STORAGE_PATH/file
 
     # Create the compose file.
   cat > "$COMPOSE_PATH" << EOF
@@ -511,6 +515,7 @@ EOF
   cat > "${TEST_COMMAND_PATH}" << EOF
 #!/usr/bin/env sh
 echo "${TEST_COMMAND_MESSAGE}"
+touch $HOST_FILE
 EOF
   chmod a+x "${TEST_COMMAND_PATH}"
 
@@ -530,6 +535,8 @@ EOF
   ${DRAKY} -h | grep -q ${TEST_COMMAND_NAME}
   run ${DRAKY} ${TEST_COMMAND_NAME}
   [[ "$output" == *"${TEST_COMMAND_MESSAGE}"* ]]
+  # Make sure that the file created has been created on the host.
+  [[ -f $HOST_FILE ]]
 
   # Test command running inside the service
   ${DRAKY} -h | grep -q ${TEST_SERVICE_COMMAND_NAME}

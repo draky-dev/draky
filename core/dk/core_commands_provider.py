@@ -52,7 +52,7 @@ class CoreCommandsProvider(CallableCommandsProvider):
         print("To be implemented.")
 
     @staticmethod
-    def get_project_path(config_manager: ConfigManager):
+    def print_project_path(config_manager: ConfigManager) -> None:
         """Handles the internal command for getting project's path.
         """
         project_path =\

@@ -17,6 +17,7 @@ from dk.initializer import initialize
 
 
 config_manager = ConfigManager()
+custom_commands_provider = CustomCommandsProvider(config_manager)
 
 # First we need to handle the "get-project-path" command that may be run before requirements for
 # the rest of the core are fulfilled.
@@ -26,7 +27,21 @@ if (
     and sys.argv[2] == '__internal'
     and sys.argv[3] == 'get-project-path'
 ):
-    CoreCommandsProvider.get_project_path(config_manager)
+    CoreCommandsProvider.print_project_path(config_manager)
+    sys.exit(0)
+
+# We check if given command is local, because if that's the case, then core has nothing more to do.
+if (
+    len(sys.argv) >= 5
+    and sys.argv[1] == 'core'
+    and sys.argv[2] == '__internal'
+    and sys.argv[3] == 'is-local-command'
+):
+    command_name = sys.argv[4]
+    if custom_commands_provider.supports(command_name):
+        command = custom_commands_provider.get_command(command_name)
+        if not command.service:
+            print(command.cmd, end='')
     sys.exit(0)
 
 # If we are initializing, we need to complete initialization before running anything else, as
@@ -60,8 +75,6 @@ core_commands_provider = CoreCommandsProvider(
     display_help,
 )
 args_parser.add_command_group(core_commands_provider)
-
-custom_commands_provider = CustomCommandsProvider(config_manager)
 
 # Add custom commands to the parser. This is needed for them to be included in the help command.
 args_parser.add_commands(custom_commands_provider.get_commands())
@@ -103,12 +116,11 @@ else:
     reminder_args = sys.argv[2:]
     variables = config_manager.get_vars()
     if custom_command.service is None:
-        command = [custom_command.cmd] + reminder_args
-        exit_code = process_executor.execute(command, variables=variables)
-    else:
-        exit_code = process_executor.execute_inside_container(
-            custom_command,
-            reminder_args,
-            variables
-        )
+        raise RuntimeError("This command was supposed to run on host.")
+
+    exit_code = process_executor.execute_inside_container(
+        custom_command,
+        reminder_args,
+        variables
+    )
     sys.exit(exit_code)

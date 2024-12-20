@@ -118,7 +118,7 @@ def sort_configs_by_dependencies(configs: list[Configs]):
         print(f"{Fore.RED}[ERROR] The following dependencies are unmet:", file=sys.stderr)
         for dep in unmet_dependencies:
             print(f"'{dep[0]}' in '{dep[1]}'", file=sys.stderr)
-        print(Style.RESET_ALL)
+        print(Style.RESET_ALL, file=sys.stderr)
         sys.exit(1)
 
     # Create a dictionary with dependencies only.

@@ -110,6 +110,14 @@ execute_core() {
     start_core
   fi
 
+  # If the command references a local one, then run it on the host directly.
+  local LOCAL_COMMAND
+  LOCAL_COMMAND="$(docker exec --user="$DRAKY_HOST_UID:$DRAKY_HOST_GID" "${CONTAINER_NAME}" dk-core core __internal is-local-command "$1" < /dev/null)"
+  if [ -n "${LOCAL_COMMAND}" ]; then
+    "${LOCAL_COMMAND}" "$@" < /dev/stdin
+    exit "$?"
+  fi
+
   docker exec "${ARGS[@]}" "${CONTAINER_NAME}" dk-core "$@" < /dev/stdin
   exit "$?"
 }

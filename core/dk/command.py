@@ -34,6 +34,6 @@ class CallableCommand(EmptyCommand):
 class ServiceCommand(EmptyCommand):
     """Dataclass representing a service command.
     """
-    service: str
+    service: str|None
     cmd: str
     user: str = '0'
