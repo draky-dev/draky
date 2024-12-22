@@ -118,6 +118,7 @@ execute_core() {
     LOCAL_COMMAND_VARS_STRING="$(docker exec --user="$DRAKY_HOST_UID:$DRAKY_HOST_GID" "${CONTAINER_NAME}" dk-core core __internal get-command-vars "$1" < /dev/null)"
     local LOCAL_COMMAND_VARS
     readarray -t LOCAL_COMMAND_VARS <<<"$LOCAL_COMMAND_VARS_STRING"
+    cd "$PROJECT_ROOT" || exit 1
     env "${LOCAL_COMMAND_VARS[@]}" "${LOCAL_COMMAND}" "$@" < /dev/stdin
     exit "$?"
   fi
