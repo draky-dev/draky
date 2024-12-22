@@ -245,6 +245,16 @@ class ConfigManager:
 
         return self.__project_data.vars
 
+    def get_vars_string(self) -> str:
+        """Returns a string with all currently set environment variables, separated by newlines.
+        """
+        env_vars = self.get_vars()
+        vars_strings: list = []
+        for key, value in env_vars.items():
+            vars_strings.append(f"{key}=\"{value}\"")
+
+        return "\n".join(vars_strings)
+
     def get_addons(self) -> list[AddonConfig]:
         """Returns configuration objects representing addons.
         """

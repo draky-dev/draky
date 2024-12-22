@@ -544,6 +544,28 @@ EOF
   [[ "$output" == *"${TEST_SERVICE_COMMAND_MESSAGE}"* ]]
 }
 
+@test "Custom commands: Environmental variables are getting passed to the custom command run on host" {
+    _initialize_test_environment
+  TEST_COMMAND_NAME="testcommand"
+  TEST_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/$TEST_COMMAND_NAME.dk.sh"
+
+  cat > "${TEST_COMMAND_PATH}" << EOF
+#!/usr/bin/env sh
+env
+EOF
+  chmod a+x "${TEST_COMMAND_PATH}"
+
+  SOME_VARIABLE_VALUE="some value"
+  # Set custom variable.
+  cat > "${TEST_PROJECT_PATH}/.draky/variables.dk.yml" << EOF
+variables:
+  SOME_VARIABLE: '$SOME_VARIABLE_VALUE'
+EOF
+
+  run "${DRAKY}" "${TEST_COMMAND_NAME}"
+  [[ "$output" == *"${SOME_VARIABLE_VALUE}"* ]]
+}
+
 @test "Custom commands: Passthrough exit code to the host" {
   _initialize_test_environment
 

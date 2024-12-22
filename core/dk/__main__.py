@@ -44,6 +44,18 @@ if (
             print(command.cmd, end='')
     sys.exit(0)
 
+# We check if given command is local, because if that's the case, then core has nothing more to do.
+if (
+    len(sys.argv) >= 5
+    and sys.argv[1] == 'core'
+    and sys.argv[2] == '__internal'
+    and sys.argv[3] == 'get-command-vars'
+):
+    command_name = sys.argv[4]
+    print(config_manager.get_vars_string(), end='')
+    sys.exit(0)
+
+
 # If we are initializing, we need to complete initialization before running anything else, as
 # therwise config manager won't have enough data.
 if len(sys.argv) == 3 and sys.argv[1] == 'env' and sys.argv[2] == 'init':

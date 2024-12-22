@@ -114,7 +114,11 @@ execute_core() {
   local LOCAL_COMMAND
   LOCAL_COMMAND="$(docker exec --user="$DRAKY_HOST_UID:$DRAKY_HOST_GID" "${CONTAINER_NAME}" dk-core core __internal is-local-command "$1" < /dev/null)"
   if [ -n "${LOCAL_COMMAND}" ]; then
-    "${LOCAL_COMMAND}" "$@" < /dev/stdin
+    local LOCAL_COMMAND_VARS_STRING
+    LOCAL_COMMAND_VARS_STRING="$(docker exec --user="$DRAKY_HOST_UID:$DRAKY_HOST_GID" "${CONTAINER_NAME}" dk-core core __internal get-command-vars "$1" < /dev/null)"
+    local LOCAL_COMMAND_VARS
+    readarray -t LOCAL_COMMAND_VARS <<<"$LOCAL_COMMAND_VARS_STRING"
+    env "${LOCAL_COMMAND_VARS[@]}" "${LOCAL_COMMAND}" "$@" < /dev/stdin
     exit "$?"
   fi
 
