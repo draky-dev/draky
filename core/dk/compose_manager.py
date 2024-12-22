@@ -167,8 +167,6 @@ class ComposeRecipe:
                 service = service_data
 
             service = self.__convert_paths_in_service(service, compose_dict, remote_file_path)
-            print(service)
-
             compose_dict['services'][service_name] = service
 
         if cleaned:
