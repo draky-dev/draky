@@ -3,7 +3,7 @@ FROM docker:27.4.1-dind-alpine3.21
 ENV DRAKY_SOURCE_PATH=/opt/draky
 ENV DRAKY_DIST_PATH=${DRAKY_SOURCE_PATH}/dist
 ENV TESTUSER_NAME=testuser
-ENV TESTUSER_UID=1000
+ENV TESTUSER_UID=2000
 
 # Note that the test environment needs to have the same python libraries as the draky-core, to avoid pylint's
 # "import-error" errors. Thanks to that, we don't need to keep pylint and pytest in the draky-core image.

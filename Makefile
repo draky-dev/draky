@@ -26,7 +26,7 @@ PLATFORMS=linux/arm64,linux/amd64
 VER = $(shell echo ${VERSION} | sed 's/^v//g')
 
 TEST_CONTAINER_NAME = ${SHORT_NAME}-test-environment
-TEST_ENVIRONMENT_VERSION_DEFAULT = 1.1.0
+TEST_ENVIRONMENT_VERSION_DEFAULT = 1.1.1
 TEST_ENVIRONMENT_VERSION = ${TEST_ENVIRONMENT_VERSION_DEFAULT}
 TEST_ENVIRONMENT_IMAGE = ghcr.io/draky-dev/${SHORT_NAME}-generic-testing-environment:${TEST_ENVIRONMENT_VERSION}
 TEST_CONTAINER_DRAKY_SOURCE_PATH = /opt/${SHORT_NAME}
@@ -42,7 +42,9 @@ build:
 	[ ! -d "${DIST_PATH}" ] || rm -r ${DIST_PATH}
 	docker buildx build -f ${ROOT}/Dockerfile --rm -t ${NAME}:${VER} .
 	mkdir -p ${DIST_BIN_PATH}
-	docker save -o ${DIST_PATH}/${SHORT_NAME}-${VER}.image.tar ${NAME}:${VER}
+	IMAGE_PATH=${DIST_PATH}/${SHORT_NAME}-${VER}.image.tar
+	docker save -o $${IMAGE_PATH} ${NAME}:${VER}
+	chmod a+r $${IMAGE_PATH}
 	TEMPLATE_DRAKY_VERSION=${VER} TEMPLATE_DRAKY_NAME=${NAME} ./bin/template-renderer.sh -t ./bin/templates/draky.template -o ${DIST_BIN_PATH}/draky
 	find ${DIST_BIN_PATH} -type f -exec chmod 755 {} \;
 	[ "${VERSION}" == "${VERSION_DEFAULT}" ] || echo "When deploying the new release, remember to push the image first!"
