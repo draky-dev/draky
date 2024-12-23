@@ -2,11 +2,23 @@
 
 bats_require_minimum_version 1.9.0
 
-TEST_PROJECT_PATH="/draky-test-environment"
+if [ -z "${TESTUSER_NAME}" ]; then
+  echo "TESTUSER_NAME was supposed to be provided by the image, but is not available!"
+  exit 1
+fi
+
+if [ -z "${TESTUSER_UID}" ]; then
+  echo "TESTUSER_UID was supposed to be provided by the image, but is not available!"
+  exit 1
+fi
+
+TESTUSER_HOME="/home/$TESTUSER_NAME"
+TEST_PROJECT_PATH="/home/${TESTUSER_NAME}/draky-test-environment"
+TEST_PROJECT_NAME=test-project
 ENV_PATH="${TEST_PROJECT_PATH}/.draky/env/dev"
 RECIPE_PATH="${ENV_PATH}/docker-compose.recipe.yml"
 COMPOSE_PATH="${ENV_PATH}/docker-compose.yml"
-HOST_STORAGE_PATH="/storage"
+HOST_STORAGE_PATH="/home/${TESTUSER_NAME}/storage"
 
 setup() {
   mkdir -p "${TEST_PROJECT_PATH}"
@@ -21,7 +33,7 @@ teardown() {
 
 _initialize_test_environment() {
   cd "${TEST_PROJECT_PATH}" || exit 1
-  printf "test-project\n0\n" | ${DRAKY} env init
+  printf "%s\n0\n" "${TEST_PROJECT_NAME}" | ${DRAKY} env init
 }
 
 @test "Environment initialization (default template)" {
@@ -32,7 +44,7 @@ _initialize_test_environment() {
 @test "Environment initialization (custom template)" {
   TEST_TEMPLATE_FILE=test-template-file
   createCustomTemplate() {
-    local TEST_TEMPLATE_PATH=/root/.draky/templates/${1}
+    local TEST_TEMPLATE_PATH="$TESTUSER_HOME/.draky/templates/${1}"
     mkdir -p "${TEST_TEMPLATE_PATH}"
     touch "${TEST_TEMPLATE_PATH}/${TEST_TEMPLATE_FILE}"
     cat > "${TEST_TEMPLATE_PATH}/template.dk.yml" << EOF
@@ -770,4 +782,30 @@ EOF
   run "${DRAKY}" "${TEST_COMMAND_NAME}"
   echo "$output"
   [[ "$output" == *"${USER}"* ]]
+}
+
+@test "Service building from dockerfile." {
+  _initialize_test_environment
+  DOCKER_CACHE_PATH=/.docker
+  # Docker cache directory exists.
+  docker exec draky bash -c "[ -d $DOCKER_CACHE_PATH ]"
+  # Docker cache directory is owned by the host user.
+  [[ "$(docker exec draky bash -c "stat -c %u $DOCKER_CACHE_PATH")" == "${UID}" ]]
+  SERVICE_NAME='test'
+
+  cat > "$COMPOSE_PATH" << EOF
+services:
+  ${SERVICE_NAME}:
+    build:
+      dockerfile: ./Dockerfile
+EOF
+
+  cat > "$(dirname "$COMPOSE_PATH")/Dockerfile" << EOF
+FROM alpine
+HEALTHCHECK --interval=1s --retries=1 --timeout=1s CMD exit 0'
+CMD sleep 100
+EOF
+  # If this returns no errors it means that dockerfile build has completed succesfully.
+  ${DRAKY} env up
+  ${DRAKY} env down
 }

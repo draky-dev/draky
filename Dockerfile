@@ -6,6 +6,7 @@ ENV DK_PATH_BIN="${DK_PATH}/bin"
 ENV PATH="${PATH}:${DK_PATH_BIN}"
 
 COPY core ${DK_PATH}
+COPY entrypoint.sh /entrypoint.sh
 
 RUN apk add --no-cache \
     bash \
@@ -17,4 +18,5 @@ RUN pip3 install -r "${DK_PATH}/dk/requirements.txt"
 
 VOLUME '/global-config' '/opt/dk-core'
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["sleep", "86400"]
