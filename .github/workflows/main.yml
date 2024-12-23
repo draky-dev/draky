@@ -75,8 +75,10 @@ jobs:
       with:
         name: ${{ env.DRAKY_DRAKY_ARTIFACT_NAME}}
         path: dist/bin
+    # We need to restore draky script's permissions.
+    # See: https://github.com/actions/upload-artifact/issues/38
     - name: Making sure that draky script is executable.
-      run: chmod u+x ${{ env.DRAKY_DRAKY_PATH }}
+      run: chmod a+x ${{ env.DRAKY_DRAKY_PATH }}
     - name: Loading image.
       run: docker load --input $DRAKY_IMAGE_PATH
     - name: Running functional tests.
