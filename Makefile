@@ -77,7 +77,7 @@ test-functional:
 	until [ "`docker inspect -f {{.State.Health.Status}} ${TEST_CONTAINER_NAME}`" == "healthy" ]; do
 		sleep 1
 		if [ "`docker inspect -f {{.State.Health.Status}} ${TEST_CONTAINER_NAME}`" == "unhealthy" ]; then
-		echo "Container ${TEST_CONTAINER_NAME} didn't get healthy."
+			echo "Container ${TEST_CONTAINER_NAME} didn't get healthy."
 			exit 1
 		fi
 	done

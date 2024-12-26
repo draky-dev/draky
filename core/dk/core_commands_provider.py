@@ -1,11 +1,9 @@
 """ Provider of the "core" commands.
 """
-import sys
 from typing import Callable
 
 from dk.command import CallableCommand
 from dk.command_provider import CallableCommandsProvider
-from dk.config_manager import ConfigManager
 
 
 class CoreCommandsProvider(CallableCommandsProvider):
@@ -50,15 +48,3 @@ class CoreCommandsProvider(CallableCommandsProvider):
     def __update_draky(self, _reminder_args: list[str]):
         #@todo
         print("To be implemented.")
-
-    @staticmethod
-    def print_project_path(config_manager: ConfigManager) -> None:
-        """Handles the internal command for getting project's path.
-        """
-        project_path =\
-            config_manager.get_project_paths().project_config\
-                if config_manager.is_project_context()\
-                else None
-        if project_path:
-            print(project_path, end='')
-            sys.exit(0)

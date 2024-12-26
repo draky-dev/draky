@@ -10,6 +10,7 @@ from dk.compose_manager import ComposeManager
 from dk.core_commands_provider import CoreCommandsProvider
 from dk.env_commands_provider import EnvCommandsProvider
 from dk.hook_manager import HookManager
+from dk.internal_commands_provider import InternalCommandsProvider
 from dk.process_executor import ProcessExecutor
 from dk.config_manager import ConfigManager
 from dk.custom_commands_provider import CustomCommandsProvider
@@ -18,43 +19,16 @@ from dk.initializer import initialize
 
 config_manager = ConfigManager()
 custom_commands_provider = CustomCommandsProvider(config_manager)
+internal_commands_provider = InternalCommandsProvider(config_manager, custom_commands_provider)
 
-# First we need to handle the "get-project-path" command that may be run before requirements for
-# the rest of the core are fulfilled.
+# Internal commands should be resolved before other commands because they may to be needed to setup
+# later commands.
 if (
-    len(sys.argv) == 4
+    len(sys.argv) > 3
     and sys.argv[1] == 'core'
     and sys.argv[2] == '__internal'
-    and sys.argv[3] == 'get-project-path'
 ):
-    CoreCommandsProvider.print_project_path(config_manager)
-    sys.exit(0)
-
-# We check if given command is local, because if that's the case, then core has nothing more to do.
-if (
-    len(sys.argv) >= 5
-    and sys.argv[1] == 'core'
-    and sys.argv[2] == '__internal'
-    and sys.argv[3] == 'is-local-command'
-):
-    command_name = sys.argv[4]
-    if custom_commands_provider.supports(command_name):
-        command = custom_commands_provider.get_command(command_name)
-        if not command.service:
-            print(command.cmd, end='')
-    sys.exit(0)
-
-# We check if given command is local, because if that's the case, then core has nothing more to do.
-if (
-    len(sys.argv) >= 5
-    and sys.argv[1] == 'core'
-    and sys.argv[2] == '__internal'
-    and sys.argv[3] == 'get-command-vars'
-):
-    command_name = sys.argv[4]
-    print(config_manager.get_vars_string(), end='')
-    sys.exit(0)
-
+    internal_commands_provider.handle_internal_commands(sys.argv[3:])
 
 # If we are initializing, we need to complete initialization before running anything else, as
 # therwise config manager won't have enough data.
