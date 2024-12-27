@@ -809,3 +809,30 @@ EOF
   ${DRAKY} env up
   ${DRAKY} env down
 }
+
+@test "Build paths are converted" {
+    _initialize_test_environment
+  # Create the recipe.
+  cat > "$RECIPE_PATH" << EOF
+services:
+  php:
+    extends:
+      file: ../../services/php/services.yml
+      service: php
+EOF
+  PHP_SERVICE_PATH="${TEST_PROJECT_PATH}/.draky/services/php"
+  mkdir -p ${PHP_SERVICE_PATH}
+  # Create an external service file.
+  cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
+services:
+  php:
+    image: php-image
+    build:
+      context: ./context
+      dockerfile: ./Dockerfile
+EOF
+  ${DRAKY} env build
+  grep -q "../../services/php/./Dockerfile" "$COMPOSE_PATH"
+  # Test if dict volume definitions are also handled correctly.
+  grep -q "../../services/php/./context" "$COMPOSE_PATH"
+}

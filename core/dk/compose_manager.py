@@ -132,12 +132,12 @@ class ComposeRecipe:
             service_data = services[service_name]
 
             service = None
-            remote_file_path = None
 
             # Validate the basic structure.
             if 'extends' in service_data:
                 extends = service_data['extends']
                 remote_file_path = os.path.dirname(self.recipe_path) + os.sep + extends['file']
+
                 remote_file_service = extends['service']
                 if not isinstance(remote_file_service, str):
                     raise ValueError(
@@ -162,11 +162,15 @@ class ComposeRecipe:
 
                 del service_data['extends']
                 service = remote_file_dict['services'][remote_file_service] | service_data
+                service = self.__convert_paths_in_service(
+                    service.copy(),
+                    compose_dict,
+                    remote_file_path,
+                )
 
             if not service:
                 service = service_data
 
-            service = self.__convert_paths_in_service(service, compose_dict, remote_file_path)
             compose_dict['services'][service_name] = service
 
         if cleaned:
@@ -180,6 +184,42 @@ class ComposeRecipe:
             compose_dict: dict,
             remote_file_path: str,
     ) -> dict:
+
+        def convert_paths(
+                value: dict|str,
+                path_array: list[str],
+                remote_file_path: str,
+        ) -> dict|str:
+            segments_left = len(path_array)
+
+            if isinstance(value, str):
+                if segments_left == 0:
+                    return value if self.__path_is_absolute(value)\
+                      else self.__path_convert_relative(value, remote_file_path)
+                raise RuntimeError(f"Path conversion error. Invalid path segment: {value}")
+
+            path_segment = path_array[0]
+            if path_segment == '*':
+                for key in value:
+                    value[key] = convert_paths(value[key], path_array[1:], remote_file_path)
+                return value
+
+            if path_segment in value:
+                value[path_segment] =\
+                    convert_paths(value[path_segment], path_array[1:], remote_file_path)
+                return value
+
+            return value
+
+        paths_list: list[str] = [
+            'build.dockerfile',
+            'build.context',
+        ]
+
+        for path in paths_list:
+            path_array: list[str] = path.split('.')
+            service = convert_paths(service.copy(), path_array, remote_file_path)
+
         # If we are getting the service data from an external file, we need to modify
         # all volumes, so they would still reference the original locations, because the
         # resulting compose file will be in a different location.
@@ -190,14 +230,6 @@ class ComposeRecipe:
                     service['volumes'][i] =\
                         volume if self.__volume_is_absolute(volume)\
                             else self.__volume_convert_relative(volume, remote_file_path)
-
-        if 'build' in service and isinstance(service['build'], dict):
-            build = service['build']
-            if 'dockerfile' in build and isinstance(build['dockerfile'], str):
-                dockerfile_path = build['dockerfile']
-                build['dockerfile'] =\
-                  dockerfile_path if self.__path_is_absolute(dockerfile_path)\
-                    else self.__path_convert_relative(dockerfile_path, remote_file_path)
 
         return service
 

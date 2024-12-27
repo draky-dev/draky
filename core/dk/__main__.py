@@ -21,7 +21,7 @@ config_manager = ConfigManager()
 custom_commands_provider = CustomCommandsProvider(config_manager)
 internal_commands_provider = InternalCommandsProvider(config_manager, custom_commands_provider)
 
-# Internal commands should be resolved before other commands because they may to be needed to setup
+# Internal commands should be resolved before other commands because they may be needed to setup
 # later commands.
 if (
     len(sys.argv) > 3
