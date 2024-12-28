@@ -119,7 +119,7 @@ execute_core() {
     local LOCAL_COMMAND_VARS
     readarray -t LOCAL_COMMAND_VARS <<<"$LOCAL_COMMAND_VARS_STRING"
     cd "$PROJECT_ROOT" || exit 1
-    env "${LOCAL_COMMAND_VARS[@]}" "${LOCAL_COMMAND}" "$@" < /dev/stdin
+    env "${LOCAL_COMMAND_VARS[@]}" "${LOCAL_COMMAND}" "${@:2}" < /dev/stdin
     exit "$?"
   fi
 

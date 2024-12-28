@@ -507,11 +507,10 @@ EOF
   ${DRAKY} -h | grep -q testcommand
 }
 
-@test "Custom commands: User can run custom scripts" {
+@test "Custom commands: User can run custom scripts in services" {
   _initialize_test_environment
 
   TEST_SERVICE=test_service
-  HOST_FILE=$HOST_STORAGE_PATH/file
 
     # Create the compose file.
   cat > "$COMPOSE_PATH" << EOF
@@ -520,16 +519,6 @@ services:
     image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
     command: 'tail -f /dev/null'
 EOF
-  TEST_COMMAND_NAME="testcommand"
-  TEST_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/$TEST_COMMAND_NAME.dk.sh"
-  TEST_COMMAND_MESSAGE="test command has been executed"
-
-  cat > "${TEST_COMMAND_PATH}" << EOF
-#!/usr/bin/env sh
-echo "${TEST_COMMAND_MESSAGE}"
-touch $HOST_FILE
-EOF
-  chmod a+x "${TEST_COMMAND_PATH}"
 
   TEST_SERVICE_COMMAND_NAME="testservicecommand"
   TEST_SERVICE_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/${TEST_SERVICE_COMMAND_NAME}.${TEST_SERVICE}.dk.sh"
@@ -543,17 +532,46 @@ EOF
 
   ${DRAKY} env up
 
-  # Test command running on the host
-  ${DRAKY} -h | grep -q ${TEST_COMMAND_NAME}
-  run ${DRAKY} ${TEST_COMMAND_NAME}
-  [[ "$output" == *"${TEST_COMMAND_MESSAGE}"* ]]
-  # Make sure that the file created has been created on the host.
-  [[ -f $HOST_FILE ]]
-
   # Test command running inside the service
   ${DRAKY} -h | grep -q ${TEST_SERVICE_COMMAND_NAME}
   run ${DRAKY} ${TEST_SERVICE_COMMAND_NAME}
   [[ "$output" == *"${TEST_SERVICE_COMMAND_MESSAGE}"* ]]
+}
+
+@test "Custom commands: User can run custom scripts on the host" {
+  _initialize_test_environment
+
+  # We need the compose file for draky to work.
+  cat > "$COMPOSE_PATH" << EOF
+services:
+  test:
+    image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
+    command: 'tail -f /dev/null'
+EOF
+
+  HOST_FILE=$HOST_STORAGE_PATH/file
+    # Create the compose file.
+  TEST_COMMAND_NAME="testcommand"
+  TEST_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/$TEST_COMMAND_NAME.dk.sh"
+  TEST_COMMAND_MESSAGE="test command has been executed"
+
+  cat > "${TEST_COMMAND_PATH}" << EOF
+#!/usr/bin/env sh
+echo "\$@"
+echo "${TEST_COMMAND_MESSAGE}"
+touch $HOST_FILE
+EOF
+  chmod a+x "${TEST_COMMAND_PATH}"
+
+  ARGUMENT=argument1
+  # Test command running on the host
+  ${DRAKY} -h | grep -q ${TEST_COMMAND_NAME}
+  run ${DRAKY} ${TEST_COMMAND_NAME} ${ARGUMENT}
+  # Make sure that draky-scoped arguments are not passed to the command.
+  [[ "$output" =~ ^${ARGUMENT} ]]
+  [[ "$output" == *"${TEST_COMMAND_MESSAGE}"* ]]
+  # Make sure that the file created has been created on the host.
+  [[ -f $HOST_FILE ]]
 }
 
 @test "Custom commands: Environmental variables are getting passed to the custom command run on host" {
@@ -575,6 +593,8 @@ variables:
 EOF
 
   run "${DRAKY}" "${TEST_COMMAND_NAME}"
+  # Make sure that variables don't have quotes included.
+  [[ "$output" != *"DRAKY_VERSION=\""* ]]
   [[ "$output" == *"${SOME_VARIABLE_VALUE}"* ]]
 }
 

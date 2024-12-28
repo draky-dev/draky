@@ -251,7 +251,7 @@ class ConfigManager:
         env_vars = self.get_vars()
         vars_strings: list = []
         for key, value in env_vars.items():
-            vars_strings.append(f"{key}=\"{value}\"")
+            vars_strings.append(f"{key}={value}")
 
         return "\n".join(vars_strings)
 
