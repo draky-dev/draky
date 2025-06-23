@@ -25,13 +25,13 @@ jobs:
       - name: Building.
         run: make build
       - name: Preserve image
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.DRAKY_IMAGE_ARTIFACT_NAME }}
           path: ${{ env.DRAKY_IMAGE_PATH }}
           retention-days: 1
       - name: Preserve draky
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.DRAKY_DRAKY_ARTIFACT_NAME }}
           path: ${{ env.DRAKY_DRAKY_PATH }}
@@ -47,7 +47,7 @@ jobs:
     - name: Installing basic dependencies.
       run: sudo apt install make
     - name: Retrieve saved Docker image
-      uses: actions/download-artifact@v3.0.2
+      uses: actions/download-artifact@v4
       with:
         name: ${{ env.DRAKY_IMAGE_ARTIFACT_NAME }}
         path: dist
@@ -66,12 +66,12 @@ jobs:
     - name: Installing basic dependencies.
       run: sudo apt install make
     - name: Retrieve saved Docker image
-      uses: actions/download-artifact@v3.0.2
+      uses: actions/download-artifact@v4
       with:
         name: ${{ env.DRAKY_IMAGE_ARTIFACT_NAME }}
         path: dist
     - name: Retrieve saved draky script
-      uses: actions/download-artifact@v3.0.2
+      uses: actions/download-artifact@v4
       with:
         name: ${{ env.DRAKY_DRAKY_ARTIFACT_NAME}}
         path: dist/bin
@@ -95,7 +95,7 @@ jobs:
     - name: Installing basic dependencies.
       run: sudo apt install make
     - name: Retrieve saved Docker image
-      uses: actions/download-artifact@v3.0.2
+      uses: actions/download-artifact@v4
       with:
         name: ${{ env.DRAKY_IMAGE_ARTIFACT_NAME }}
         path: dist
