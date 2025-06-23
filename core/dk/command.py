@@ -21,6 +21,7 @@ class EmptyCommand:
     name: str
     help: str
     flags: list[Flag] = field(default_factory=lambda: [])
+    add_help: bool = True
 
 
 @dataclass(kw_only=True)

@@ -88,6 +88,15 @@ class ProcessExecutor:
         command.extend(['down', '-v'])
         self.execute(command)
 
+    def env_compose(self, arguments: list[str]|None = None) -> None:
+        """Runs docker compose with custom arguments.
+        """
+        if arguments is None:
+            arguments = []
+        command = self.get_command_base()
+        command.extend(arguments)
+        self.execute(command)
+
     def execute(
             self,
             command: list,

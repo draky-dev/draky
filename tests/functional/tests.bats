@@ -19,6 +19,7 @@ ENV_PATH="${TEST_PROJECT_PATH}/.draky/env/dev"
 RECIPE_PATH="${ENV_PATH}/docker-compose.recipe.yml"
 COMPOSE_PATH="${ENV_PATH}/docker-compose.yml"
 HOST_STORAGE_PATH="/home/${TESTUSER_NAME}/storage"
+TEARDOWN_SKIP=0
 
 setup() {
   mkdir -p "${TEST_PROJECT_PATH}"
@@ -26,6 +27,10 @@ setup() {
 }
 
 teardown() {
+  if [[ "$TEARDOWN_SKIP" == 1 ]]; then
+    TEARDOWN_SKIP=0
+    return
+  fi
   ${DRAKY} env down
   rm -r "${TEST_PROJECT_PATH}"
   rm -r "${HOST_STORAGE_PATH}"
@@ -495,6 +500,14 @@ services:
 EOF
   ${DRAKY} env build
   grep -q "${ENTRYPOINT_SCRIPT}" "$COMPOSE_PATH"
+}
+
+@test "Core commands: draky env compose" {
+  run ${DRAKY} env compose version --help
+  [[ "$output" == *"Show the Docker Compose version information"* ]]
+
+  run ${DRAKY} env compose --help
+  [[ "$output" == *"Usage:"* ]]
 }
 
 @test "Custom commands: Custom command is added to the help" {

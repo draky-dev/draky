@@ -83,6 +83,15 @@ class EnvCommandsProvider(CallableCommandsProvider):
         )
 
         self._add_command(
+            CallableCommand(
+                name='compose',
+                help='Pass arguments directly to the docker compose.',
+                callback=self.__compose,
+                add_help=False,
+            )
+        )
+
+        self._add_command(
             DebugEnvCommandsProvider(config_manager, display_help_callback)
         )
 
@@ -118,6 +127,11 @@ class EnvCommandsProvider(CallableCommandsProvider):
         """
         substitute = self.substitute_variables_flag in _reminder_args
         self.process_executor.env_build(substitute)
+
+    def __compose(self, _reminder_args: list[str]):
+        """Pass all arguments to the docker compose.
+        """
+        self.process_executor.env_compose(_reminder_args)
 
 class DebugEnvCommandsProvider(CallableCommandsProvider):
     """Provides core commands useful for debugging.

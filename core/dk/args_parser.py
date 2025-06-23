@@ -43,7 +43,8 @@ class ArgsSubparser:
         subparsers = self._argparse_subparsers
         parser = subparsers.add_parser(
             command.name,
-            help=command.help
+            help=command.help,
+            add_help=command.add_help,
         )
         parser.add_argument(
             command.name,
