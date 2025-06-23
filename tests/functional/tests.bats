@@ -503,6 +503,7 @@ EOF
 }
 
 @test "Core commands: draky env compose" {
+  _initialize_test_environment
   run ${DRAKY} env compose version --help
   [[ "$output" == *"Show the Docker Compose version information"* ]]
 
