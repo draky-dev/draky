@@ -108,7 +108,7 @@ def sort_configs_by_dependencies(configs: list[Configs]):
     """Sorts a list of configs by dependencies.
     """
     ids: list[str] = [item.id for item in configs]
-    unmet_dependencies: list[(str, str)] = []
+    unmet_dependencies: list[tuple[str, str]] = []
     for config in filter(lambda c: c.dependencies, configs):
         unmet_dependencies_list = filter(lambda d: d not in ids, config.dependencies)
         for dep in unmet_dependencies_list:
