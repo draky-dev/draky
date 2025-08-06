@@ -41,7 +41,6 @@ fi
 
 start_core() {
   if ! docker container inspect ${CONTAINER_NAME} &> /dev/null; then
-
     local ARGS=(
       --name "$CONTAINER_NAME"
       --group-add="$DRAKY_GID"
@@ -93,6 +92,10 @@ execute_core() {
     # This is required otherwise COLUMNS will be empty here, as this value is not inherited.
     -e "COLUMNS=$(tput cols)"
   )
+
+  if [[ -n "$DRAKY_ENV" ]]; then
+    ARGS+=(-e "DRAKY_ENV=$DRAKY_ENV")
+  fi
 
   # If we are not sending anything through stdin, we can allocate a pseudo-tty.
   if [ -t 0 ]; then

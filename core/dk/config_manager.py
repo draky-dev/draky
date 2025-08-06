@@ -180,12 +180,15 @@ class ConfigManager:
 
         self.__configs: list[Configs] = fetch_configs(self.get_project_config_path())
 
-        self.__load_variables()
+        self.__project_data.vars = self.__load_variables()
         # These variables will be empty if we are just initializing the project.
         self.__project_data.project = self.__project_data.vars['DRAKY_PROJECT_ID']\
             if 'DRAKY_PROJECT_ID' in self.__project_data.vars else None
-        self.__project_data.env = self.__project_data.vars['DRAKY_ENVIRONMENT']\
-            if 'DRAKY_ENVIRONMENT' in self.__project_data.vars else None
+
+        self.__project_data.env = self.__select_env(self.__project_data.vars)
+        if self.__project_data.env:
+            # Make sure that DRAKY_ENV has the up to date value.
+            self.__project_data.vars['DRAKY_ENV'] = self.__project_data.env
 
     def get_project_paths(self) -> ProjectPaths:
         """Returns object storing project paths.
@@ -273,17 +276,17 @@ class ConfigManager:
 
         return string
 
-    def __load_variables(self) -> None:
+    def __load_variables(self) -> dict[str, str]:
         """Loads variables.
         """
         env_content_list: list[str] = []
+        for config in self.__configs:
+            env_content_list.append(self.__dict_into_env(config.variables))
         # Add to the dictionary all existing variables that start with the prefix.
         env_content_list.append(self.__dict_into_env(
             {k: v for k, v in os.environ.items() if k.startswith(self.__draky_prefix)}
         ))
-        for config in self.__configs:
-            env_content_list.append(self.__dict_into_env(config.variables))
-        self.__project_data.vars = dotenv_values(stream=io.StringIO("\n".join(env_content_list)))
+        return dotenv_values(stream=io.StringIO("\n".join(env_content_list)))
 
     def __dict_into_env(self, dictionary: dict[str, str]) -> str:
         """Converts the given dictionary into the env string.
@@ -292,3 +295,9 @@ class ConfigManager:
         for key, value in dictionary.items():
             output += f"{key}={value}\n"
         return output
+
+    def __select_env(self, variables: dict[str, str]) -> str | None:
+        if not self.is_project_context():
+            return None
+
+        return variables['DRAKY_ENV'] if 'DRAKY_ENV' in variables else "dev"

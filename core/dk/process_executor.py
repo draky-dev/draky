@@ -37,7 +37,7 @@ class ProcessExecutor:
             'docker',
             'compose',
             '-p',
-            f"{self.config.get_project_id()}",
+            f"{self.config.get_project_id()}-{self.config.get_env()}",
             '-f',
             self.__get_compose_path(),
         ]

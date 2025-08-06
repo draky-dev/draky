@@ -21,6 +21,7 @@ class EnvCommandsProvider(CallableCommandsProvider):
     ):
         super().__init__(display_help_callback)
         self.process_executor: ProcessExecutor = process_executor
+        self.config_manager: ConfigManager = config_manager
 
         self._add_command(
             CallableCommand(
@@ -84,6 +85,14 @@ class EnvCommandsProvider(CallableCommandsProvider):
 
         self._add_command(
             CallableCommand(
+                name='name',
+                help='Name of the current environment.',
+                callback=self.__name,
+            ),
+        )
+
+        self._add_command(
+            CallableCommand(
                 name='compose',
                 help='Pass arguments directly to the docker compose.',
                 callback=self.__compose,
@@ -127,6 +136,11 @@ class EnvCommandsProvider(CallableCommandsProvider):
         """
         substitute = self.substitute_variables_flag in _reminder_args
         self.process_executor.env_build(substitute)
+
+    def __name(self, _reminder_args: list[str]):
+        """Returns the name of the current environment.
+        """
+        print(self.config_manager.get_env())
 
     def __compose(self, _reminder_args: list[str]):
         """Pass all arguments to the docker compose.

@@ -41,7 +41,8 @@ def __templates_in_path(path_to_parent) -> Generator[CustomTemplate, None, None]
         yield CustomTemplate(template_id, template_root, template_root)
 
 def initialize(config_manager: ConfigManager):
-    """ Function initializing new project. """
+    """ Function initializing a new project.
+    """
 
     project_config_path: str = config_manager.get_project_config_path()
 
@@ -88,8 +89,7 @@ def initialize(config_manager: ConfigManager):
     ) as file:
         file.write(f"# Do not manually edit this file. It's managed by Draky.\n"
                    f"variables:\n"
-                   f"    DRAKY_PROJECT_ID: {project_id}\n"
-                   f"    DRAKY_ENVIRONMENT: dev\n")
+                   f"    DRAKY_PROJECT_ID: {project_id}\n")
         file.close()
 
     print(f"{Fore.GREEN}Project has been initialized.{Style.RESET_ALL}")
