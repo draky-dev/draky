@@ -5,6 +5,7 @@ import os
 import sys
 from colorama import Fore, Style
 
+from dk.config_manager import BasicConfigManager
 from dk.args_parser import ArgsParser
 from dk.compose_manager import ComposeManager
 from dk.core_commands_provider import CoreCommandsProvider
@@ -17,7 +18,14 @@ from dk.custom_commands_provider import CustomCommandsProvider
 from dk.initializer import initialize
 
 
+# If we are initializing, we need to complete initialization before running anything else, as
+# therwise config manager won't have enough data.
+if len(sys.argv) == 3 and sys.argv[1] == 'env' and sys.argv[2] == 'init':
+    initialize(BasicConfigManager())
+    sys.exit(0)
+
 config_manager = ConfigManager()
+
 custom_commands_provider = CustomCommandsProvider(config_manager)
 internal_commands_provider = InternalCommandsProvider(config_manager, custom_commands_provider)
 
@@ -29,12 +37,6 @@ if (
     and sys.argv[2] == '__internal'
 ):
     internal_commands_provider.handle_internal_commands(sys.argv[3:])
-
-# If we are initializing, we need to complete initialization before running anything else, as
-# therwise config manager won't have enough data.
-if len(sys.argv) == 3 and sys.argv[1] == 'env' and sys.argv[2] == 'init':
-    initialize(config_manager)
-    sys.exit(0)
 
 compose_builder = ComposeManager(config_manager)
 hook_manager = HookManager(config_manager)
@@ -51,7 +53,6 @@ def display_help(arguments=None):
 
 env_commands_provider = EnvCommandsProvider(
     process_executor,
-    config_manager.is_project_context(),
     display_help,
     config_manager,
 )
@@ -78,9 +79,9 @@ if args_parser.has_command(sys.argv[1]):
     if sys.argv[1] == env_commands_provider.name():
         # Find all environments.
         available_environments = next(os.walk(config_manager.get_project_paths().environments))[1]
-        if config_manager.get_env() not in available_environments:
+        if config_manager.get_project_env() not in available_environments:
             print(
-                f"Environment '{config_manager.get_env()}' has not been found in"
+                f"Environment '{config_manager.get_project_env()}' has not been found in"
                 f" '{config_manager.get_project_paths().environments}'."
             )
             sys.exit(1)

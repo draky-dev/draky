@@ -37,7 +37,7 @@ class ProcessExecutor:
             'docker',
             'compose',
             '-p',
-            f"{self.config.get_project_id()}-{self.config.get_env()}",
+            f"{self.config.get_project_id()}-{self.config.get_project_env()}",
             '-f',
             self.__get_compose_path(),
         ]
@@ -50,7 +50,7 @@ class ProcessExecutor:
         if os.path.exists(recipe_path):
             with open(recipe_path, "r", encoding='utf8') as f:
                 recipe_content = yaml.safe_load(f)
-            recipe = ComposeRecipe(recipe_content, recipe_path, self.config.get_env_path())
+            recipe = ComposeRecipe(recipe_content, recipe_path, self.config.get_project_env_path())
             compose = self.compose_manager.create(recipe, self.__get_compose_path())
             compose.set_substituted_variables(substitute_vars)
             self.hook_manager.addon_alter_services(recipe, compose)
@@ -64,11 +64,12 @@ class ProcessExecutor:
         for var in variables:
             dotenv_lines.append(f"{var}={variables[var]}")
         dotenv_content = "\n".join(dotenv_lines)
-        with open(self.config.get_env_path() + os.sep + '.env', "w", encoding='utf8') as text_file:
+        with open(self.config.get_project_env_path() + os.sep + '.env', "w", encoding='utf8')\
+                as text_file:
             text_file.write(dotenv_content)
 
     def env_start(self) -> None:
-        """Start environment.
+        """Start the current environment.
         """
         command = self.get_command_base()
         command.extend(['up', '-d'])
@@ -194,7 +195,7 @@ class ProcessExecutor:
         return self.execute(command, pass_stdin=True, container=True)
 
     def __get_recipe_path(self) -> str:
-        return f"{self.config.get_env_path()}/docker-compose.recipe.yml"
+        return f"{self.config.get_project_env_path()}/docker-compose.recipe.yml"
 
     def __get_compose_path(self) -> str:
-        return f"{self.config.get_env_path()}/docker-compose.yml"
+        return f"{self.config.get_project_env_path()}/docker-compose.yml"

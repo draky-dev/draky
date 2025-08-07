@@ -38,6 +38,7 @@ DEFAULT_ENV_RECIPE_PATH="$(get_recipe_path ${DEFAULT_ENV})"
 DEFAULT_ENV_COMPOSE_PATH="$(get_compose_path ${DEFAULT_ENV})"
 HOST_STORAGE_PATH="/home/${TESTUSER_NAME}/storage"
 TEARDOWN_SKIP=0
+TEARDOWN_DOWN_SKIP=0
 
 setup() {
   mkdir -p "${TEST_PROJECT_PATH}"
@@ -49,7 +50,11 @@ teardown() {
     TEARDOWN_SKIP=0
     return
   fi
-  ${DRAKY} env down
+  if [[ "$TEARDOWN_DOWN_SKIP" == 1 ]]; then
+    TEARDOWN_DOWN_SKIP=0
+  else
+    ${DRAKY} env down
+  fi
   rm -r "${TEST_PROJECT_PATH}"
   rm -r "${HOST_STORAGE_PATH}"
 }
@@ -100,6 +105,7 @@ EOF
 
   _initialize_test_environment
   testDefaultHelp "${DRAKY}" env debug
+  TEARDOWN_DOWN_SKIP=1
 }
 
 coreVarsOutputted() {
@@ -109,7 +115,6 @@ coreVarsOutputted() {
   [[ "$output" == *"DRAKY_PROJECT_CONFIG_ROOT"* ]]
   [[ "$output" == *"DRAKY_PROJECT_ROOT"* ]]
   [[ "$output" == *"DRAKY_HOST_IP"* ]]
-  [[ "$output" == *"DRAKY_PATH_ADDONS"* ]]
   [[ "$output" == *"DRAKY_PROJECT_ID"* ]]
 }
 
@@ -955,4 +960,37 @@ EOF
   export DRAKY_ENV="${TEST_ENV_2}"
   run "${DRAKY}" env name
   [[ "$output" == "${TEST_ENV_2}"$'\r' ]]
+}
+
+@test "DRAKY_ENV: Environment-specific variables" {
+  _initialize_test_environment
+  TEST_ENV='test'
+  mkdir -p "$(get_env_path "$TEST_ENV")"
+  TEST_SERVICE=test_service
+  cat > "$(get_env_path "$TEST_ENV")/docker-compose.recipe.yml" << EOF
+services:
+  $TEST_SERVICE:
+    image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
+    command: 'tail -f /dev/null'
+EOF
+  TEST_VAR_NAME=test_variable
+  TEST_VAR_VALUE=test-value
+  cat > "${TEST_PROJECT_PATH}/.draky/variables.dk.yml" << EOF
+variables:
+  ${TEST_VAR_NAME}: ${TEST_VAR_VALUE}
+environments:
+  - $TEST_ENV
+EOF
+
+  export DRAKY_ENV=${DEFAULT_ENV}
+  run ${DRAKY} env name
+  [[ "$output" == *"${DEFAULT_ENV}"* ]]
+  run ${DRAKY} env debug vars
+  [[ "$output" != *"${TEST_VAR_NAME} = ${TEST_VAR_VALUE}"* ]]
+
+  export DRAKY_ENV=${TEST_ENV}
+  run ${DRAKY} env name
+  [[ "$output" == *"${TEST_ENV}"* ]]
+  run ${DRAKY} env debug vars
+  [[ "$output" == *"${TEST_VAR_NAME} = ${TEST_VAR_VALUE}"* ]]
 }

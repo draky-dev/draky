@@ -15,7 +15,6 @@ class EnvCommandsProvider(CallableCommandsProvider):
     def __init__(
             self,
             process_executor: ProcessExecutor,
-            is_project_context: bool,
             display_help_callback: Callable,
             config_manager: ConfigManager,
     ):
@@ -31,7 +30,7 @@ class EnvCommandsProvider(CallableCommandsProvider):
             )
         )
 
-        if not is_project_context:
+        if not config_manager.is_project_context():
             return
 
         self.substitute_variables_flag: str = '-s'
@@ -140,7 +139,7 @@ class EnvCommandsProvider(CallableCommandsProvider):
     def __name(self, _reminder_args: list[str]):
         """Returns the name of the current environment.
         """
-        print(self.config_manager.get_env())
+        print(self.config_manager.get_project_env())
 
     def __compose(self, _reminder_args: list[str]):
         """Pass all arguments to the docker compose.
