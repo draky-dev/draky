@@ -2,7 +2,7 @@
 """
 import sys
 
-from dk.config_manager import ConfigManager
+from dk.config_manager import BasicConfigManager
 from dk.custom_commands_provider import CustomCommandsProvider
 
 
@@ -12,10 +12,10 @@ class InternalCommandsProvider():
 
     def __init__(
             self,
-            config_manager: ConfigManager,
+            config_manager: BasicConfigManager,
             custom_command_provider: CustomCommandsProvider,
     ):
-        self.config_manager: ConfigManager = config_manager
+        self.config_manager: BasicConfigManager = config_manager
         self.custom_command_provider: CustomCommandsProvider = custom_command_provider
 
     def handle_internal_commands(self, commands: list) -> None:

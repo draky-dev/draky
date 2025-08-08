@@ -201,6 +201,31 @@ class BasicConfigManager:
 
         return self._project_data.paths.project_config
 
+    def get_project_paths(self) -> ProjectPaths:
+        """Returns object storing project paths.
+        """
+        self._ensure_project_context()
+
+        return self._project_data.paths
+
+    def get_vars(self) -> dict:
+        """Returns a dictionary of currently set environment variables.
+        """
+        if not self.is_project_context():
+            return self.vars
+
+        return self._project_data.vars
+
+    def get_vars_string(self) -> str:
+        """Returns a string with all currently set environment variables, separated by newlines.
+        """
+        env_vars = self.get_vars()
+        vars_strings: list = []
+        for key, value in env_vars.items():
+            vars_strings.append(f"{key}={value}")
+
+        return "\n".join(vars_strings)
+
     def _ensure_project_context(self):
         if not self.is_project_context():
             raise RuntimeError("Not in the project context.")
@@ -263,13 +288,6 @@ class ConfigManager(BasicConfigManager):
             # Make sure that DRAKY_ENV has the up to date value.
             self._project_data.vars['DRAKY_ENV'] = self._project_data.env
 
-    def get_project_paths(self) -> ProjectPaths:
-        """Returns object storing project paths.
-        """
-        self._ensure_project_context()
-
-        return self._project_data.paths
-
     def get_project_id(self) -> str|None:
         """Returns current project's id.
         """
@@ -299,24 +317,6 @@ class ConfigManager(BasicConfigManager):
         if command not in self._project_data.commands_vars:
             return {}
         return self._project_data.commands_vars[command].copy()
-
-    def get_vars(self) -> dict:
-        """Returns a dictionary of currently set environment variables.
-        """
-        if not self.is_project_context():
-            return self.vars
-
-        return self._project_data.vars
-
-    def get_vars_string(self) -> str:
-        """Returns a string with all currently set environment variables, separated by newlines.
-        """
-        env_vars = self.get_vars()
-        vars_strings: list = []
-        for key, value in env_vars.items():
-            vars_strings.append(f"{key}={value}")
-
-        return "\n".join(vars_strings)
 
     def get_addons(self) -> list[AddonConfig]:
         """Returns configuration objects representing addons.

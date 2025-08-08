@@ -3,7 +3,7 @@
 
 import yaml
 
-from dk.config_manager import ConfigManager
+from dk.config_manager import BasicConfigManager
 from dk.utils import find_files_weighted_by_path
 from dk.command import ServiceCommand
 
@@ -12,8 +12,8 @@ class CustomCommandsProvider:
     """Provider of the custom commands.
     """
 
-    def __init__(self, config_manager: ConfigManager):
-        self.config_manager: ConfigManager = config_manager
+    def __init__(self, config_manager: BasicConfigManager):
+        self.config_manager: BasicConfigManager = config_manager
 
     def supports(self, command_name: str) -> bool:
         """Returns the information if given command is supported.

@@ -18,16 +18,15 @@ from dk.custom_commands_provider import CustomCommandsProvider
 from dk.initializer import initialize
 
 
+basic_config_manager = BasicConfigManager()
+
 # If we are initializing, we need to complete initialization before running anything else, as
 # therwise config manager won't have enough data.
 if len(sys.argv) == 3 and sys.argv[1] == 'env' and sys.argv[2] == 'init':
-    initialize(BasicConfigManager())
+    initialize(basic_config_manager)
     sys.exit(0)
 
-config_manager = ConfigManager()
-
-custom_commands_provider = CustomCommandsProvider(config_manager)
-internal_commands_provider = InternalCommandsProvider(config_manager, custom_commands_provider)
+custom_commands_provider = CustomCommandsProvider(basic_config_manager)
 
 # Internal commands should be resolved before other commands because they may be needed to setup
 # later commands.
@@ -36,8 +35,13 @@ if (
     and sys.argv[1] == 'core'
     and sys.argv[2] == '__internal'
 ):
+    internal_commands_provider = \
+        InternalCommandsProvider(BasicConfigManager(), custom_commands_provider)
     internal_commands_provider.handle_internal_commands(sys.argv[3:])
+    sys.exit(0)
 
+
+config_manager = ConfigManager()
 compose_builder = ComposeManager(config_manager)
 hook_manager = HookManager(config_manager)
 process_executor = ProcessExecutor(config_manager, compose_builder, hook_manager)
