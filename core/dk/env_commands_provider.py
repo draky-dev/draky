@@ -30,7 +30,7 @@ class EnvCommandsProvider(CallableCommandsProvider):
             )
         )
 
-        if not config_manager.is_project_context():
+        if not config_manager.is_project_context_full():
             return
 
         self.substitute_variables_flag: str = '-s'
@@ -172,7 +172,7 @@ class DebugEnvCommandsProvider(CallableCommandsProvider):
         return 'Debug environment'
 
     def __debug_vars(self, _reminder_args: list[str]):
-        if not self.config_manager.is_project_context():
+        if not self.config_manager.is_project_context_full():
             print("Variables are available only in the project context")
             return
         #@todo

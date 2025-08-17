@@ -9,7 +9,7 @@ from dataclasses import dataclass
 import yaml
 from colorama import Fore, Style
 
-from dk.config_manager import BasicConfigManager
+from dk.config_manager import ConfigManager
 
 
 @dataclass
@@ -40,7 +40,7 @@ def __templates_in_path(path_to_parent) -> Generator[CustomTemplate, None, None]
         template_id = __get_template_id(os.path.join(template_root, 'template.dk.yml'))
         yield CustomTemplate(template_id, template_root, template_root)
 
-def initialize(config_manager: BasicConfigManager):
+def initialize(config_manager: ConfigManager):
     """ Function initializing a new project.
     """
 

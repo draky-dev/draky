@@ -904,6 +904,7 @@ services:
     image: test-image
 EOF
   run "${DRAKY}" env debug vars
+  echo "$output"
   [[ "$output" == *"DRAKY_ENV = dev"* ]]
   # DRAKY_ENV is not available outside the project context.
   cd /

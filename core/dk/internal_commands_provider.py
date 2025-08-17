@@ -2,8 +2,9 @@
 """
 import sys
 
-from dk.config_manager import BasicConfigManager
+from dk.config_manager import ConfigManager
 from dk.custom_commands_provider import CustomCommandsProvider
+from dk.utils import dict_to_env_string
 
 
 class InternalCommandsProvider():
@@ -12,10 +13,10 @@ class InternalCommandsProvider():
 
     def __init__(
             self,
-            config_manager: BasicConfigManager,
+            config_manager: ConfigManager,
             custom_command_provider: CustomCommandsProvider,
     ):
-        self.config_manager: BasicConfigManager = config_manager
+        self.config_manager: ConfigManager = config_manager
         self.custom_command_provider: CustomCommandsProvider = custom_command_provider
 
     def handle_internal_commands(self, commands: list) -> None:
@@ -31,8 +32,8 @@ class InternalCommandsProvider():
 
     def __print_project_path(self) -> None:
         project_path =\
-            self.config_manager.get_project_paths().project_config\
-                if self.config_manager.is_project_context()\
+            self.config_manager.get_project_config_path()\
+                if self.config_manager.is_project_context_full()\
                 else None
         if project_path:
             print(project_path, end='')
@@ -45,4 +46,4 @@ class InternalCommandsProvider():
                 print(command.cmd, end='')
 
     def __print_command_vars(self) -> None:
-        print(self.config_manager.get_vars_string(), end='')
+        print(dict_to_env_string(self.config_manager.get_vars()), end='')

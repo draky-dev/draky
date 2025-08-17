@@ -9,6 +9,8 @@ endif
 # Filter functional tests. Set this variable to regex matching the names of tests you want to run.
 FFILTER =
 
+MOUNT_CORE ?= 0
+
 ROOT = $(shell pwd -P)
 
 CORE_PATH = ${ROOT}/core
@@ -81,7 +83,7 @@ test-functional:
 			exit 1
 		fi
 	done
-	docker exec -t --user ${TESTUSER_NAME} ${TEST_CONTAINER_NAME} /bin/bash -c "TEST_FILTER='${FFILTER}' DRAKY_SOURCE_PATH=${TEST_CONTAINER_DRAKY_SOURCE_PATH} ${TEST_CONTAINER_DRAKY_SOURCE_PATH}/tests/bin/functional-tests.sh"
+	docker exec -t --user ${TESTUSER_NAME} ${TEST_CONTAINER_NAME} /bin/bash -c "MOUNT_CORE=${MOUNT_CORE} TEST_FILTER='${FFILTER}' DRAKY_SOURCE_PATH=${TEST_CONTAINER_DRAKY_SOURCE_PATH} ${TEST_CONTAINER_DRAKY_SOURCE_PATH}/tests/bin/functional-tests.sh"
 
 test-lint:
 	docker run \

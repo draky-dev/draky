@@ -3,7 +3,7 @@
 
 import yaml
 
-from dk.config_manager import BasicConfigManager
+from dk.config_manager import ConfigManager
 from dk.utils import find_files_weighted_by_path
 from dk.command import ServiceCommand
 
@@ -12,8 +12,8 @@ class CustomCommandsProvider:
     """Provider of the custom commands.
     """
 
-    def __init__(self, config_manager: BasicConfigManager):
-        self.config_manager: BasicConfigManager = config_manager
+    def __init__(self, config_manager: ConfigManager):
+        self.config_manager: ConfigManager = config_manager
 
     def supports(self, command_name: str) -> bool:
         """Returns the information if given command is supported.
@@ -39,13 +39,12 @@ class CustomCommandsProvider:
         raise ValueError("Unsupported command.")
 
     def __gather_custom_commands(self) -> list[ServiceCommand]:
-
-        if not self.config_manager.is_project_context():
+        if not self.config_manager.is_project_context_full():
             return []
 
         command_files = find_files_weighted_by_path("*.dk.sh", {
             self.config_manager.get_project_paths().commands: 10,
-        }, self.config_manager.get_project_paths().project_config)
+        }, self.config_manager.get_project_config_path())
 
         custom_commands = []
         for path, filename in command_files:
@@ -62,6 +61,7 @@ class CustomCommandsProvider:
             # Find yaml companion.
             help_text = ''
             user: str = '0'
+            environments = []
             try:
                 with open(full_path + ".yml", "r", encoding='utf8') as stream:
                     yaml_companion = yaml.safe_load(stream)
@@ -69,8 +69,14 @@ class CustomCommandsProvider:
                         help_text = str(yaml_companion['help'])
                     if 'user' in yaml_companion:
                         user = str(yaml_companion['user'])
+                    if 'environments' in yaml_companion:
+                        environments = yaml_companion['environments']
             except (IOError, yaml.YAMLError):
                 pass
+
+            if environments:
+                if self.config_manager.get_project_env() not in environments:
+                    continue
 
             custom_commands.append(
                 ServiceCommand(
