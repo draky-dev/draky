@@ -24,6 +24,27 @@ draky core destroy # We make sure that the core is not already running.
 DRAKY_MOUNT_CORE="$(pwd)/core" draky core start
 ```
 
+## Running tests
+
+To run core unit tests, run `make test-core`.
+
+To test linting, run `make test-lint`.
+
+To run functional tests, run `make test-functional`.
+
+When running functional tests, you can also pass `FFILTER` variable to run only some tests. The
+value of this variable is a regular expression that will be matched against test names. E.g.:
+
+```bash
+make test-functional FFILTER="Context switching"
+```
+
+You can also considerably speed up tests by skipping the bulding step and mounting the core with:
+
+```bash
+make test-functional MOUNT_CORE=1
+```
+
 # Requirements:
 - bash
 - docker
