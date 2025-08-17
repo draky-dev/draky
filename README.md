@@ -30,13 +30,13 @@ To run core unit tests, run `make test-core`.
 
 To test linting, run `make test-lint`.
 
-To run functional tests, run `make test-functional`.
+To run functional tests, run `make build test-functional`.
 
 When running functional tests, you can also pass `FFILTER` variable to run only some tests. The
 value of this variable is a regular expression that will be matched against test names. E.g.:
 
 ```bash
-make test-functional FFILTER="Context switching"
+make build test-functional FFILTER="Context switching"
 ```
 
 You can also considerably speed up tests by skipping the bulding step and mounting the core with:
