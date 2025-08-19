@@ -120,6 +120,7 @@ coreVarsOutputted() {
   [[ "$output" == *"DRAKY_PROJECT_ROOT"* ]]
   [[ "$output" == *"DRAKY_HOST_IP"* ]]
   [[ "$output" == *"DRAKY_PROJECT_ID"* ]]
+  [[ "$output" == *"DRAKY_PATH_ADDONS"* ]]
 }
 
 @test "Core vars in debug" {

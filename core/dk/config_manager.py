@@ -102,6 +102,9 @@ class ProjectConfigFull(ProjectConfigInit):
         # Set project vars.
         self.vars: dict[str, str] = vars_dict_from_configs(self.configs)
 
+        # Set helper env variables.
+        self.vars['DRAKY_PATH_ADDONS'] = f"{self.project_config_path}/addons"
+
         # Make sure that DRAKY_ENV has the up to date value.
         self.vars['DRAKY_ENV'] = self.env
 
