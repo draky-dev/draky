@@ -13,11 +13,12 @@ if [ -z "${TESTUSER_UID}" ]; then
 fi
 
 TESTUSER_HOME="/home/$TESTUSER_NAME"
-TEST_PROJECT_PATH="/home/${TESTUSER_NAME}/draky-test-environment"
+TEST_PROJECT_PATH="${TESTUSER_HOME}/draky-test-environment"
+TEST_PROJECT_CONFIG_PATH="$TEST_PROJECT_PATH/.draky"
 TEST_PROJECT_NAME=test-project
 
 get_env_path() {
-  ENV_PATH="${TEST_PROJECT_PATH}/.draky/env"
+  ENV_PATH="${TEST_PROJECT_CONFIG_PATH}/env"
   if [[ -n "$1"  ]]; then
     ENV_PATH="$ENV_PATH/$1"
   fi
@@ -44,6 +45,14 @@ HOST_STORAGE_PATH="/home/${TESTUSER_NAME}/storage"
 TEARDOWN_SKIP=0
 TEARDOWN_DOWN_SKIP=0
 
+_get_envs_with_compose() {
+  for dir in "$(get_env_path)"/*/; do
+    if [[ -f "${dir}/docker-compose.yml" ]]; then
+      basename "${dir}"
+    fi
+  done
+}
+
 setup() {
   mkdir -p "${TEST_PROJECT_PATH}"
   mkdir -p "${HOST_STORAGE_PATH}"
@@ -55,12 +64,24 @@ teardown() {
     return
   fi
   if [[ "$TEARDOWN_DOWN_SKIP" == 1 ]]; then
-    TEARDOWN_DOWN_SKIP=0
-  else
-    ${DRAKY} env down
-  fi
+  TEARDOWN_DOWN_SKIP=0
+else
+  mapfile -t envs < <(_get_envs_with_compose)
+
+  for env in "${envs[@]}"; do
+    switch_environment "$env"
+    run ${DRAKY} env down
+  done
+
+fi
   rm -r "${TEST_PROJECT_PATH}"
   rm -r "${HOST_STORAGE_PATH}"
+
+  # Don't allow for `stat [PROJECT]/.draky/env/[ENV]/docker-compose.yml: no such file or directory`
+  # error on env down.
+  if [[ "$output" == *"no such file or directory"* ]]; then
+    return 1
+  fi
 }
 
 _initialize_test_project() {
@@ -68,9 +89,24 @@ _initialize_test_project() {
   printf "%s\n0\n" "${TEST_PROJECT_NAME}" | ${DRAKY} env init
 }
 
+_create_env() {
+  if [[ -z "$1" ]]; then
+    echo "_create_env(): Argument is required."
+    exit 1
+  fi
+  local ENV=${1}
+  mkdir -p "$(get_env_path "$ENV")"
+  cat > "$(get_recipe_path "$ENV")" << EOF
+services:
+  ${ENV}_service:
+    image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
+    command: 'tail -f /dev/null'
+EOF
+}
+
 @test "Environment initialization (default template)" {
   _initialize_test_project
-  [ -d "${TEST_PROJECT_PATH}/.draky" ]
+  [ -d "${TEST_PROJECT_CONFIG_PATH}" ]
 }
 
 @test "Environment initialization (custom template)" {
@@ -86,14 +122,14 @@ EOF
   createCustomTemplate test-template
   cd "$TEST_PROJECT_PATH"
   printf "test-project\n1\n" | ${DRAKY} env init
-  [ -f "${TEST_PROJECT_PATH}/.draky/${TEST_TEMPLATE_FILE}" ]
+  [ -f "${TEST_PROJECT_CONFIG_PATH}/${TEST_TEMPLATE_FILE}" ]
 }
 
 @test "Context switching" {
   _initialize_test_project
   cd /
   run ${DRAKY} -h
-  [[ "$output" == *"Leaving the context: '${TEST_PROJECT_PATH}/.draky'"* ]]
+  [[ "$output" == *"Leaving the context: '${TEST_PROJECT_CONFIG_PATH}'"* ]]
   [[ "$output" == *"Entering the context: 'None'."* ]]
 }
 
@@ -145,7 +181,7 @@ coreVarsOutputted() {
 
 @test "Custom vars in debug" {
   _initialize_test_project
-  cat > $TEST_PROJECT_PATH/.draky/test.dk.yml << EOF
+  cat > $TEST_PROJECT_CONFIG_PATH/test.dk.yml << EOF
 variables:
   TEST_VAR: test1
 EOF
@@ -156,7 +192,7 @@ EOF
 
 @test "Custom vars in .env file" {
   _initialize_test_project
-  cat > $TEST_PROJECT_PATH/.draky/test.dk.yml << EOF
+  cat > $TEST_PROJECT_CONFIG_PATH/test.dk.yml << EOF
 variables:
   TEST_VAR: test1
 EOF
@@ -169,14 +205,14 @@ EOF
 @test "Config dependencies" {
   _initialize_test_project
     createConfigFile() {
-    cat > "$TEST_PROJECT_PATH/.draky/${1}.dk.yml" << EOF
+    cat > "$TEST_PROJECT_CONFIG_PATH/${1}.dk.yml" << EOF
 id: ${1}
 variables:
   TEST_VAR: ${2}
 EOF
   }
   createConfigFileWithDependency() {
-    cat > "$TEST_PROJECT_PATH/.draky/${1}.dk.yml" << EOF
+    cat > "$TEST_PROJECT_CONFIG_PATH/${1}.dk.yml" << EOF
 id: ${1}
 variables:
   TEST_VAR: ${2}
@@ -199,7 +235,7 @@ EOF
 @test "Config dependencies unmet" {
   _initialize_test_project
   createConfigFileWithDependency() {
-    cat > "$TEST_PROJECT_PATH/.draky/${1}.dk.yml" << EOF
+    cat > "$TEST_PROJECT_CONFIG_PATH/${1}.dk.yml" << EOF
 id: ${1}
 dependencies:
   - ${2}
@@ -215,7 +251,7 @@ EOF
 @test "Config dependencies cyclic" {
   _initialize_test_project
   createConfigFileWithDependency() {
-    cat > "$TEST_PROJECT_PATH/.draky/${1}.dk.yml" << EOF
+    cat > "$TEST_PROJECT_CONFIG_PATH/${1}.dk.yml" << EOF
 id: ${1}
 dependencies:
   - ${2}
@@ -267,7 +303,7 @@ services:
       file: ../../services/php/services.yml
       service: php
 EOF
-  PHP_SERVICE_PATH="${TEST_PROJECT_PATH}/.draky/services/php"
+  PHP_SERVICE_PATH="${TEST_PROJECT_CONFIG_PATH}/services/php"
   mkdir -p ${PHP_SERVICE_PATH}
   # Create an external service file.
   cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
@@ -289,7 +325,7 @@ services:
       file: ../../services/php/services.yml
       service: php
 EOF
-  PHP_SERVICE_PATH="${TEST_PROJECT_PATH}/.draky/services/php"
+  PHP_SERVICE_PATH="${TEST_PROJECT_CONFIG_PATH}/services/php"
   mkdir -p ${PHP_SERVICE_PATH}
   # Create an external service file.
   cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
@@ -318,7 +354,7 @@ services:
       file: ../../services/php/services.yml
       service: php
 EOF
-  PHP_SERVICE_PATH="${TEST_PROJECT_PATH}/.draky/services/php"
+  PHP_SERVICE_PATH="${TEST_PROJECT_CONFIG_PATH}/services/php"
   mkdir -p ${PHP_SERVICE_PATH}
   # Create an external service file.
   cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
@@ -345,7 +381,7 @@ services:
 volumes:
   ${NAMED_VOLUME_1}:
 EOF
-  PHP_SERVICE_PATH="${TEST_PROJECT_PATH}/.draky/services/php"
+  PHP_SERVICE_PATH="${TEST_PROJECT_CONFIG_PATH}/services/php"
   mkdir -p ${PHP_SERVICE_PATH}
   # Create an external service file.
   cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
@@ -370,7 +406,7 @@ services:
       file: ../../services/php/services.yml
       service: php
 EOF
-  PHP_SERVICE_PATH="${TEST_PROJECT_PATH}/.draky/services/php"
+  PHP_SERVICE_PATH="${TEST_PROJECT_CONFIG_PATH}/services/php"
   mkdir -p ${PHP_SERVICE_PATH}
   # Create an external service file.
   cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
@@ -401,7 +437,7 @@ services:
       file: ../../services/nginx/services.yml
       service: nginx
 EOF
-  PHP_SERVICE_PATH="${TEST_PROJECT_PATH}/.draky/services/php"
+  PHP_SERVICE_PATH="${TEST_PROJECT_CONFIG_PATH}/services/php"
   mkdir -p ${PHP_SERVICE_PATH}
   # Create an external service file.
   cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
@@ -410,7 +446,7 @@ services:
   php:
     image: php-image
 EOF
-  NGINX_SERVICE_PATH="${TEST_PROJECT_PATH}/.draky/services/nginx"
+  NGINX_SERVICE_PATH="${TEST_PROJECT_CONFIG_PATH}/services/nginx"
   mkdir -p ${NGINX_SERVICE_PATH}
   # Create an external service file.
   cat > "${NGINX_SERVICE_PATH}/services.yml" << EOF
@@ -434,7 +470,7 @@ services:
     image: "\${PHP_IMAGE_TEST}"
 EOF
   # Give variable a value.
-  cat > "${TEST_PROJECT_PATH}/.draky/variables.dk.yml" << EOF
+  cat > "${TEST_PROJECT_CONFIG_PATH}/variables.dk.yml" << EOF
 variables:
   PHP_IMAGE_TEST: php-image
 EOF
@@ -461,7 +497,7 @@ EOF
   _initialize_test_project
 
   # Create a test addon.
-  ADDON_PATH="${TEST_PROJECT_PATH}/.draky/addons/test-addon"
+  ADDON_PATH="${TEST_PROJECT_CONFIG_PATH}/addons/test-addon"
   mkdir -p "$ADDON_PATH"
   # Create the addon config file.
   cat > "${ADDON_PATH}/test-addon.addon.dk.yml" << EOF
@@ -494,7 +530,7 @@ EOF
 
   # Create a test addon.
   ADDON_NAME=test-addon
-  ADDON_PATH="${TEST_PROJECT_PATH}/.draky/addons/${ADDON_NAME}"
+  ADDON_PATH="${TEST_PROJECT_CONFIG_PATH}/addons/${ADDON_NAME}"
   ENTRYPOINT_SCRIPT=/test-entrypoint.sh
   mkdir -p "$ADDON_PATH"
   # Create the addon config file.
@@ -514,7 +550,7 @@ services:
       file: ../../services/php/services.yml
       service: php
 EOF
-  PHP_SERVICE_PATH="${TEST_PROJECT_PATH}/.draky/services/php"
+  PHP_SERVICE_PATH="${TEST_PROJECT_CONFIG_PATH}/services/php"
   mkdir -p ${PHP_SERVICE_PATH}
   # Create an external service file.
   cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
@@ -540,7 +576,7 @@ EOF
 
 @test "Custom commands: Custom command is added to the help" {
   _initialize_test_project
-  TEST_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/testcommand.dk.sh"
+  TEST_COMMAND_PATH="${TEST_PROJECT_CONFIG_PATH}/testcommand.dk.sh"
     cat > "${TEST_COMMAND_PATH}" << EOF
 #!/usr/bin/env sh
 EOF
@@ -562,7 +598,7 @@ services:
 EOF
 
   TEST_SERVICE_COMMAND_NAME="testservicecommand"
-  TEST_SERVICE_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/${TEST_SERVICE_COMMAND_NAME}.${TEST_SERVICE}.dk.sh"
+  TEST_SERVICE_COMMAND_PATH="${TEST_PROJECT_CONFIG_PATH}/${TEST_SERVICE_COMMAND_NAME}.${TEST_SERVICE}.dk.sh"
   TEST_SERVICE_COMMAND_MESSAGE="test command inside the service has been executed"
 
   cat > "${TEST_SERVICE_COMMAND_PATH}" << EOF
@@ -593,7 +629,7 @@ EOF
   HOST_FILE=$HOST_STORAGE_PATH/file
     # Create the compose file.
   TEST_COMMAND_NAME="testcommand"
-  TEST_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/$TEST_COMMAND_NAME.dk.sh"
+  TEST_COMMAND_PATH="${TEST_PROJECT_CONFIG_PATH}/$TEST_COMMAND_NAME.dk.sh"
   TEST_COMMAND_MESSAGE="test command has been executed"
 
   cat > "${TEST_COMMAND_PATH}" << EOF
@@ -618,7 +654,7 @@ EOF
 @test "Custom commands: Environmental variables are getting passed to the custom command run on host" {
     _initialize_test_project
   TEST_COMMAND_NAME="testcommand"
-  TEST_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/$TEST_COMMAND_NAME.dk.sh"
+  TEST_COMMAND_PATH="${TEST_PROJECT_CONFIG_PATH}/$TEST_COMMAND_NAME.dk.sh"
 
   cat > "${TEST_COMMAND_PATH}" << EOF
 #!/usr/bin/env sh
@@ -628,7 +664,7 @@ EOF
 
   SOME_VARIABLE_VALUE="some value"
   # Set custom variable.
-  cat > "${TEST_PROJECT_PATH}/.draky/variables.dk.yml" << EOF
+  cat > "${TEST_PROJECT_CONFIG_PATH}/variables.dk.yml" << EOF
 variables:
   SOME_VARIABLE: '$SOME_VARIABLE_VALUE'
 EOF
@@ -652,7 +688,7 @@ services:
     command: 'tail -f /dev/null'
 EOF
   TEST_COMMAND_NAME="testcommand"
-  TEST_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/$TEST_COMMAND_NAME.dk.sh"
+  TEST_COMMAND_PATH="${TEST_PROJECT_CONFIG_PATH}/$TEST_COMMAND_NAME.dk.sh"
   ERROR_CODE=11
 
   cat > "${TEST_COMMAND_PATH}" << EOF
@@ -662,7 +698,7 @@ EOF
   chmod a+x "${TEST_COMMAND_PATH}"
 
   TEST_SERVICE_COMMAND_NAME="testservicecommand"
-  TEST_SERVICE_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/${TEST_SERVICE_COMMAND_NAME}.${TEST_SERVICE}.dk.sh"
+  TEST_SERVICE_COMMAND_PATH="${TEST_PROJECT_CONFIG_PATH}/${TEST_SERVICE_COMMAND_NAME}.${TEST_SERVICE}.dk.sh"
 
   cat > "${TEST_SERVICE_COMMAND_PATH}" << EOF
 #!/usr/bin/env sh
@@ -696,7 +732,7 @@ services:
     command: 'tail -f /dev/null'
 EOF
   TEST_COMMAND_NAME="testcommand"
-  TEST_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/$TEST_COMMAND_NAME.dk.sh"
+  TEST_COMMAND_PATH="${TEST_PROJECT_CONFIG_PATH}/$TEST_COMMAND_NAME.dk.sh"
   TEST_COMMAND_MESSAGE="we are running command on host in terminal"
 
   cat > "${TEST_COMMAND_PATH}" << EOF
@@ -708,7 +744,7 @@ EOF
   chmod a+x "${TEST_COMMAND_PATH}"
 
   TEST_SERVICE_COMMAND_NAME="testservicecommand"
-  TEST_SERVICE_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/${TEST_SERVICE_COMMAND_NAME}.${TEST_SERVICE}.dk.sh"
+  TEST_SERVICE_COMMAND_PATH="${TEST_PROJECT_CONFIG_PATH}/${TEST_SERVICE_COMMAND_NAME}.${TEST_SERVICE}.dk.sh"
   TEST_SERVICE_COMMAND_MESSAGE="we are running command in service in terminal"
 
   cat > "${TEST_SERVICE_COMMAND_PATH}" << EOF
@@ -741,7 +777,7 @@ services:
     command: 'tail -f /dev/null'
 EOF
   TEST_COMMAND_NAME="testcommand"
-  TEST_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/$TEST_COMMAND_NAME.dk.sh"
+  TEST_COMMAND_PATH="${TEST_PROJECT_CONFIG_PATH}/$TEST_COMMAND_NAME.dk.sh"
   TEST_COMMAND_STDIN_DATA="stdin data passed to the command running on the host"
   TEST_COMMAND_MESSAGE="we are not in a terminal when using stdin to pass data to the command running on host"
 
@@ -758,7 +794,7 @@ EOF
   chmod a+x "${TEST_COMMAND_PATH}"
 
   TEST_SERVICE_COMMAND_NAME="testservicecommand"
-  TEST_SERVICE_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/${TEST_SERVICE_COMMAND_NAME}.${TEST_SERVICE}.dk.sh"
+  TEST_SERVICE_COMMAND_PATH="${TEST_PROJECT_CONFIG_PATH}/${TEST_SERVICE_COMMAND_NAME}.${TEST_SERVICE}.dk.sh"
   TEST_SERVICE_COMMAND_STDIN_DATA="stdin data passed to the command running inside the service"
   TEST_SERVICE_COMMAND_MESSAGE="we are not in a terminal when using stdin to pass data to the command running in a service"
 
@@ -796,7 +832,7 @@ services:
     command: 'tail -f /dev/null'
 EOF
   TEST_COMMAND_NAME="testcommand"
-  TEST_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/$TEST_COMMAND_NAME.$TEST_SERVICE.dk.sh"
+  TEST_COMMAND_PATH="${TEST_PROJECT_CONFIG_PATH}/$TEST_COMMAND_NAME.$TEST_SERVICE.dk.sh"
   TEST_COMMAND_COMPANION_PATH="${TEST_COMMAND_PATH}.yml"
 
   cat > "${TEST_COMMAND_PATH}" << EOF
@@ -826,7 +862,7 @@ services:
     command: 'tail -f /dev/null'
 EOF
   TEST_COMMAND_NAME="testcommand"
-  TEST_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/$TEST_COMMAND_NAME.$TEST_SERVICE.dk.sh"
+  TEST_COMMAND_PATH="${TEST_PROJECT_CONFIG_PATH}/$TEST_COMMAND_NAME.$TEST_SERVICE.dk.sh"
   TEST_COMMAND_COMPANION_PATH="${TEST_COMMAND_PATH}.yml"
 
   cat > "${TEST_COMMAND_PATH}" << EOF
@@ -880,7 +916,7 @@ services:
       file: ../../services/php/services.yml
       service: php
 EOF
-  PHP_SERVICE_PATH="${TEST_PROJECT_PATH}/.draky/services/php"
+  PHP_SERVICE_PATH="${TEST_PROJECT_CONFIG_PATH}/services/php"
   mkdir -p ${PHP_SERVICE_PATH}
   # Create an external service file.
   cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
@@ -899,11 +935,6 @@ EOF
 
 @test "DRAKY_ENV: Default is dev" {
   _initialize_test_project
-  cat > "$DEFAULT_ENV_COMPOSE_PATH" << EOF
-services:
-  php:
-    image: test-image
-EOF
   run "${DRAKY}" env debug vars
   echo "$output"
   [[ "$output" == *"DRAKY_ENV = dev"* ]]
@@ -916,18 +947,13 @@ EOF
 @test "DRAKY_ENV: Switch" {
   _initialize_test_project
   TEST_ENV='test'
-  mkdir -p "$(get_env_path "$TEST_ENV")"
   TEST_SERVICE=test_service
-  cat > "$(get_env_path "$TEST_ENV")/docker-compose.recipe.yml" << EOF
-services:
-  $TEST_SERVICE:
-    image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
-    command: 'tail -f /dev/null'
-EOF
+  _create_env $TEST_ENV
 
-  export DRAKY_ENV=${TEST_ENV}
+  switch_environment $TEST_ENV
   run "${DRAKY}" env debug vars
   [[ "$output" == *"DRAKY_ENV = test"* ]]
+  
   # Test the "env name" command.
   run "${DRAKY}" env name
   [[ "$output" == "${TEST_ENV}"$'\r' ]]
@@ -936,7 +962,11 @@ EOF
   [ -f "$(get_compose_path ${TEST_ENV})" ]
   [ -f "$(get_env_path ${TEST_ENV})/.env" ]
   ${DRAKY} env up
-  docker ps | grep "${TEST_PROJECT_NAME}-${TEST_ENV}-${TEST_SERVICE}"
+  docker ps | grep "${TEST_PROJECT_NAME}-${TEST_ENV}-$TEST_ENV"
+  ${DRAKY} env down
+
+  # Go back to the default env before the teardown.
+  switch_environment $DEFAULT_ENV
 }
 
 @test "DRAKY_ENV: Hierarchy of variable substitution" {
@@ -944,19 +974,8 @@ EOF
   TEST_ENV_1='test1'
   TEST_ENV_2='test2'
 
-  cat > "${DEFAULT_ENV_COMPOSE_PATH}" << EOF
-services:
-  php:
-    image: test-image
-EOF
-
-  mkdir -p "$(get_env_path $TEST_ENV_1)"
-  cat > "$(get_compose_path $TEST_ENV_1)" << EOF
-services:
-  php:
-    image: test-image
-EOF
-  cat > "$TEST_PROJECT_PATH/.draky/variables.dk.yml" << EOF
+  _create_env $TEST_ENV_1
+  cat > "$TEST_PROJECT_CONFIG_PATH/variables.dk.yml" << EOF
 variables:
   DRAKY_ENV: ${TEST_ENV_1}
 EOF
@@ -971,17 +990,11 @@ EOF
 @test "DRAKY_ENV: Environment-specific variables" {
   _initialize_test_project
   TEST_ENV='test'
-  mkdir -p "$(get_env_path "$TEST_ENV")"
   TEST_SERVICE=test_service
-  cat > "$(get_env_path "$TEST_ENV")/docker-compose.recipe.yml" << EOF
-services:
-  $TEST_SERVICE:
-    image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
-    command: 'tail -f /dev/null'
-EOF
+  _create_env $TEST_ENV
   TEST_VAR_NAME=test_variable
   TEST_VAR_VALUE=test-value
-  cat > "${TEST_PROJECT_PATH}/.draky/variables.dk.yml" << EOF
+  cat > "${TEST_PROJECT_CONFIG_PATH}/variables.dk.yml" << EOF
 variables:
   ${TEST_VAR_NAME}: ${TEST_VAR_VALUE}
 environments:
@@ -1007,30 +1020,12 @@ EOF
   TEST_COMMAND_NAME='testcommand'
 
   TEST_ENV1='test1'
-  mkdir -p "$(get_env_path "$TEST_ENV1")"
   TEST_ENV2='test2'
-  mkdir -p "$(get_env_path "$TEST_ENV2")"
 
-  cat > "${DEFAULT_ENV_COMPOSE_PATH}" << EOF
-services:
-  default_service:
-    image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
-    command: 'tail -f /dev/null'
-EOF
-  cat > "$(get_compose_path $TEST_ENV1)" << EOF
-services:
-  test1_service:
-    image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
-    command: 'tail -f /dev/null'
-EOF
-  cat > "$(get_compose_path $TEST_ENV2)" << EOF
-services:
-  test2_service:
-    image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
-    command: 'tail -f /dev/null'
-EOF
+  _create_env $TEST_ENV1
+  _create_env $TEST_ENV2
 
-  TEST_COMMAND_PATH="${TEST_PROJECT_PATH}/.draky/${TEST_COMMAND_NAME}.dk.sh"
+  TEST_COMMAND_PATH="${TEST_PROJECT_CONFIG_PATH}/${TEST_COMMAND_NAME}.dk.sh"
   cat > "${TEST_COMMAND_PATH}" << EOF
 #!/usr/bin/env sh
 EOF
@@ -1049,4 +1044,33 @@ EOF
   switch_environment $TEST_ENV1
   run ${DRAKY} -h
   [[ "$output" == *"${TEST_COMMAND_NAME}"* ]]
+}
+
+@test "DRAKY_ENV: Variable hierarchy" {
+  local TEST_ENV=test
+  _initialize_test_project
+  _create_env ${TEST_ENV}
+
+  TEST_VAR_NAME="TEST_VAR"
+  TEST_VAR_VALUE="initial value"
+  TEST_VAR_VALUE_ENV_TEST="env test value"
+
+  cat > "$TEST_PROJECT_CONFIG_PATH/variables.dk.yml" << EOF
+variables:
+  ${TEST_VAR_NAME}: ${TEST_VAR_VALUE}
+EOF
+
+  run ${DRAKY} env debug vars
+  [[ "$output" == *"${TEST_VAR_NAME} = ${TEST_VAR_VALUE}"* ]]
+
+  cat > "$TEST_PROJECT_CONFIG_PATH/variables.${TEST_ENV}.dk.yml" << EOF
+variables:
+  ${TEST_VAR_NAME}: ${TEST_VAR_VALUE_ENV_TEST}
+environments:
+  - ${TEST_ENV}
+EOF
+
+  switch_environment $TEST_ENV
+  run ${DRAKY} env debug vars
+  [[ "$output" == *"${TEST_VAR_NAME} = ${TEST_VAR_VALUE_ENV_TEST}"* ]]
 }

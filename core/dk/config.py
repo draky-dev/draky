@@ -63,7 +63,7 @@ class TemplateConfig(Config):
 Configs = Union[BasicConfig, AddonConfig, TemplateConfig]
 
 
-def fetch_configs(config_path, env: str | None = None) -> list[Configs]:
+def fetch_configs(config_path) -> list[Configs]:
     """Returns a list of config objects. If no "env" is provided, then only universal configs are
        returned.
     """
@@ -83,12 +83,6 @@ def fetch_configs(config_path, env: str | None = None) -> list[Configs]:
                     config = TemplateConfig(content, config_path)
                 else:
                     config = BasicConfig(content, config_path)
-
-                if env and env not in config.environments:
-                    continue
-
-                if not env and config.environments:
-                    continue
             configs.append(config)
 
     sort_configs_by_dependencies(configs)
@@ -127,3 +121,5 @@ def sort_configs_by_dependencies(configs: list[Configs]):
             raise RuntimeError("Could not find the config object. "
                                "The logic of sorting configs by dependencies must be flawed.")
         configs.append(config)
+
+    configs.sort(key=lambda c: len(c.environments))

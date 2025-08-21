@@ -29,7 +29,7 @@ class VariableNotExists(ValueError):
 class ProjectConfigInit:
     """Class representing the project's configuration when it's during the initialization phase.
     """
-    project_config_path: str
+    config_path: str
 
     def __init__(self):
         if not ProjectConfigInit.dependencies_are_met():
@@ -44,7 +44,7 @@ class ProjectConfigInit:
         environments_path = project_config_path + '/env'
         commands_path = project_config_path + '/commands'
 
-        self.project_config_path = project_config_path
+        self.config_path = project_config_path
         self.paths = ProjectPaths(
             environments=environments_path,
             commands=commands_path,
@@ -88,14 +88,16 @@ class ProjectConfigFull(ProjectConfigInit):
 
         self.id: str = project_id
 
-        universal_configs = fetch_configs(self.project_config_path)
+        all_configs = fetch_configs(self.config_path)
+
+        universal_configs = [c for c in all_configs if not c.environments]
         universal_variables = vars_dict_from_configs(universal_configs)
 
         env: str = universal_variables['DRAKY_ENV']\
             if 'DRAKY_ENV' in universal_variables else "dev"
 
-        self.configs: list[Config] =\
-            universal_configs + fetch_configs(self.project_config_path, env)
+        self.configs: list[Config] = \
+            [c for c in all_configs if not c.environments or env in c.environments]
 
         self.env: str = env
 
@@ -103,7 +105,7 @@ class ProjectConfigFull(ProjectConfigInit):
         self.vars: dict[str, str] = vars_dict_from_configs(self.configs)
 
         # Set helper env variables.
-        self.vars['DRAKY_PATH_ADDONS'] = f"{self.project_config_path}/addons"
+        self.vars['DRAKY_PATH_ADDONS'] = f"{self.config_path}/addons"
 
         # Make sure that DRAKY_ENV has the up to date value.
         self.vars['DRAKY_ENV'] = self.env
@@ -230,7 +232,7 @@ class ConfigManager:
         if self.project is None:
             raise RuntimeError("Project config path is not set.")
 
-        return self.project.project_config_path
+        return self.project.config_path
 
     def get_project_paths(self) -> ProjectPaths:
         """Returns object storing project paths.
