@@ -3,6 +3,7 @@
 import os
 from importlib import util
 
+from dk.config import AddonConfig
 from dk.compose_manager import Compose, ComposeRecipe
 from dk.config_manager import ConfigManager
 
@@ -31,20 +32,20 @@ class HookManager:
         """Allows addons to alter services.
         """
         services = compose.list_services()
-        addons = self.__config.get_addons()
-
-        for addon in addons:
-
-            for service in services:
-                service_addons = recipe.get_addons(service)
-                if addon.id not in service_addons:
-                    continue
+        addons: list[AddonConfig] = self.__config.get_addons()
+        for service in services:
+            service_addons_ids = recipe.get_addons(service)
+            for service_addon_id in service_addons_ids:
+                addon: AddonConfig | None =\
+                    next((a for a in addons if a.id == service_addon_id), None)
+                if not addon:
+                    raise ValueError(f"Unknown addon '{service_addon_id}'")
 
                 addon_path = addon.path
                 addon_path_absolute = (
-                    self.__config.get_project_config_path() +
-                    os.sep +
-                    os.path.dirname(addon_path)
+                        self.__config.get_project_config_path() +
+                        os.sep +
+                        os.path.dirname(addon_path)
                 )
 
                 hooks_path = addon_path_absolute + os.sep + 'hooks.py'

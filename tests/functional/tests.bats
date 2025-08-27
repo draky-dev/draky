@@ -266,6 +266,21 @@ EOF
   [[ "$output" == *"test2"* ]]
 }
 
+@test "docker-compose.yml only" {
+  _initialize_test_project
+
+  rm "$DEFAULT_ENV_RECIPE_PATH"
+
+  cat > "$DEFAULT_ENV_COMPOSE_PATH" << EOF
+services:
+  test:
+    image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
+    command: 'tail -f /dev/null'
+EOF
+  run ${DRAKY} env up
+  [[ "$status" == 0 ]]
+}
+
 @test "Build compose" {
   _initialize_test_project
   # Create the recipe.
@@ -565,6 +580,37 @@ EOF
   grep -q "${ENTRYPOINT_SCRIPT}" "$DEFAULT_ENV_COMPOSE_PATH"
 }
 
+@test "Addons: Referencing non-available addons yields error" {
+  _initialize_test_project
+  # Create a test addon.
+  ADDON_NAME=test-addon
+  PHP_SERVICE_PATH="${TEST_PROJECT_CONFIG_PATH}/services/php"
+  mkdir -p ${PHP_SERVICE_PATH}
+
+  # Create an external service file.
+  cat > "${PHP_SERVICE_PATH}/services.yml" << EOF
+services:
+  php:
+    image: php
+    draky:
+      addons:
+        - ${ADDON_NAME}
+
+EOF
+  # Create the recipe.
+  cat > "$DEFAULT_ENV_RECIPE_PATH" << EOF
+services:
+  php:
+    extends:
+      file: ../../services/php/services.yml
+      service: php
+EOF
+
+  run ${DRAKY} env build
+  [[ "$output" == *"Unknown addon '${ADDON_NAME}'"* ]]
+  [[ "$status" != 0 ]]
+}
+
 @test "Core commands: draky env compose" {
   _initialize_test_project
   run ${DRAKY} env compose version --help
@@ -590,7 +636,7 @@ EOF
   TEST_SERVICE=test_service
 
     # Create the compose file.
-  cat > "$DEFAULT_ENV_COMPOSE_PATH" << EOF
+  cat > "$DEFAULT_ENV_RECIPE_PATH" << EOF
 services:
   $TEST_SERVICE:
     image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
@@ -619,7 +665,7 @@ EOF
   _initialize_test_project
 
   # We need the compose file for draky to work.
-  cat > "$DEFAULT_ENV_COMPOSE_PATH" << EOF
+  cat > "$DEFAULT_ENV_RECIPE_PATH" << EOF
 services:
   test:
     image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
@@ -681,7 +727,7 @@ EOF
   TEST_SERVICE=test_service
 
     # Create the compose file.
-  cat > "$DEFAULT_ENV_COMPOSE_PATH" << EOF
+  cat > "$DEFAULT_ENV_RECIPE_PATH" << EOF
 services:
   $TEST_SERVICE:
     image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
@@ -725,7 +771,7 @@ EOF
   TEST_SERVICE=test_service
 
     # Create the compose file.
-  cat > "$DEFAULT_ENV_COMPOSE_PATH" << EOF
+  cat > "$DEFAULT_ENV_RECIPE_PATH" << EOF
 services:
   $TEST_SERVICE:
     image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
@@ -770,7 +816,7 @@ EOF
   TEST_SERVICE=test_service
 
     # Create the compose file.
-  cat > "$DEFAULT_ENV_COMPOSE_PATH" << EOF
+  cat > "$DEFAULT_ENV_RECIPE_PATH" << EOF
 services:
   $TEST_SERVICE:
     image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
@@ -825,7 +871,7 @@ EOF
   TEST_SERVICE=test_service
   USER_ID=1100
     # Create the compose file.
-  cat > "$DEFAULT_ENV_COMPOSE_PATH" << EOF
+  cat > "$DEFAULT_ENV_RECIPE_PATH" << EOF
 services:
   $TEST_SERVICE:
     image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
@@ -855,7 +901,7 @@ EOF
   TEST_SERVICE=test_service
   USER=bin
     # Create the compose file.
-  cat > "$DEFAULT_ENV_COMPOSE_PATH" << EOF
+  cat > "$DEFAULT_ENV_RECIPE_PATH" << EOF
 services:
   $TEST_SERVICE:
     image: ghcr.io/draky-dev/draky-generic-testing-environment:1.0.0
@@ -889,7 +935,7 @@ EOF
   [[ "$(docker exec draky bash -c "stat -c %u $DOCKER_CACHE_PATH")" == "${UID}" ]]
   SERVICE_NAME='test'
 
-  cat > "$DEFAULT_ENV_COMPOSE_PATH" << EOF
+  cat > "$DEFAULT_ENV_RECIPE_PATH" << EOF
 services:
   ${SERVICE_NAME}:
     build:
