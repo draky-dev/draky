@@ -19,7 +19,7 @@ COLOR_RED='\033[0;91m'
 
 DRAKY_HOST_IP=$(docker network inspect bridge -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}')
 
-is_user_home_dir() { getent passwd | awk -F: -v d="$PWD" '$6 == d { exit 0 } END { exit 1 }'; }
+is_user_home_dir() { getent passwd | awk -F: -v d="$PWD" '$6 == d { found=1 } END { exit !found }'; }
 
 find_project_config_path() {
   if [ "$PWD" = / ]; then
