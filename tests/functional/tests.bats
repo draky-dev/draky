@@ -815,7 +815,7 @@ EOF
 
   TEST_SERVICE=test_service
 
-    # Create the compose file.
+  # Create the compose file.
   cat > "$DEFAULT_ENV_RECIPE_PATH" << EOF
 services:
   $TEST_SERVICE:
