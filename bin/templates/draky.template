@@ -17,8 +17,6 @@ COLOR_RESET='\033[0m'
 #COLOR_WHITE='\033[0;97m'
 COLOR_RED='\033[0;91m'
 
-DRAKY_HOST_IP=$(docker network inspect bridge -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}')
-
 is_user_home_dir() { cat /etc/passwd | awk -F: -v d="$PWD" '$6 == d { found=1 } END { exit !found }'; }
 
 find_project_config_path() {
@@ -52,7 +50,6 @@ start_core() {
       -e "DRAKY_GLOBAL_CONFIG_ROOT=$CORE_GLOBAL_CONFIG_PATH"
       -e "DRAKY_HOST_UID=$DRAKY_HOST_UID"
       -e "DRAKY_HOST_GID=$DRAKY_HOST_GID"
-      -e "DRAKY_HOST_IP=$DRAKY_HOST_IP"
     )
 
     if [[ "$PROJECT_CONFIG_PATH" ]]; then
