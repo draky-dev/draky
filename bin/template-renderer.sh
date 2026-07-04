@@ -37,7 +37,7 @@ shift "$((OPTIND-1))"
 : ${TEMPLATE_VAR_PREFIX:?"You need to provide a prefix of variables being replaced with -p flag."}
 
 ARRAY=()
-while read p; do
+while read -r p; do
   ARRAY+=("\$${p}")
 done < <(env | sed -rn "s/(${TEMPLATE_VAR_PREFIX}\w+)=.*/\1/p")
 
