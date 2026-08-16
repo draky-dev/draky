@@ -19,7 +19,7 @@ RUN python -m venv ${DK_CUSTOM_VENV} && \
 
 ENV PATH="/${DK_CUSTOM_VENV}/bin:${PATH}:${DK_PATH_BIN}"
 
-VOLUME '/global-config' '/opt/dk-core'
+VOLUME '/draky-global-config'  '/draky-docker-config' '/opt/dk-core'
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["sleep", "86400"]

@@ -4,7 +4,8 @@ CONTAINER_NAME=draky
 IMAGE_NAME=$TEMPLATE_DRAKY_NAME
 DRAKY_VERSION=$TEMPLATE_DRAKY_VERSION
 PROJECT_CONFIG_DIR=.draky
-CORE_GLOBAL_CONFIG_PATH=/global-config
+CORE_GLOBAL_CONFIG_PATH=/draky-global-config
+CORE_DOCKER_CONFIG_PATH=/draky-docker-config
 DRAKY_DOCKER_SOCKET=${DRAKY_DOCKER_SOCKET:-/var/run/docker.sock}
 
 DRAKY_HOST_UID="${UID}"
@@ -33,6 +34,7 @@ find_project_config_path() {
 }
 
 HOST_GLOBAL_CONFIG_PATH="$HOME/.draky"
+HOST_DOCKER_CONFIG_PATH="${DOCKER_CONFIG:-$HOME/.docker}"
 
 # Make sure that HOST_GLOBAL_CONFIG_PATH exists.
 if [ ! -d "$HOST_GLOBAL_CONFIG_PATH" ]; then
@@ -51,6 +53,13 @@ start_core() {
       -e "DRAKY_HOST_UID=$DRAKY_HOST_UID"
       -e "DRAKY_HOST_GID=$DRAKY_HOST_GID"
     )
+
+    if [[ -d "$HOST_DOCKER_CONFIG_PATH" ]]; then
+      ARGS+=(
+        -e "DOCKER_CONFIG=$CORE_DOCKER_CONFIG_PATH"
+        -v "$HOST_DOCKER_CONFIG_PATH:$CORE_DOCKER_CONFIG_PATH"
+      )
+    fi
 
     if [[ "$PROJECT_CONFIG_PATH" ]]; then
       ARGS+=(
