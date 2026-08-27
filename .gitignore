@@ -3,3 +3,5 @@
 dist
 local/
 .draky/
+__pycache__/
+*.py[cod]

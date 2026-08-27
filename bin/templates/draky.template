@@ -33,8 +33,9 @@ find_project_config_path() {
   fi
 }
 
+DOCKER_CONFIG="${DOCKER_CONFIG:-$HOME/.docker}"
 HOST_GLOBAL_CONFIG_PATH="$HOME/.draky"
-HOST_DOCKER_CONFIG_PATH="${DOCKER_CONFIG:-$HOME/.docker}"
+HOST_DOCKER_CONFIG_PATH="${DRAKY_DOCKER_CONFIG:-$DOCKER_CONFIG}"
 
 # Make sure that HOST_GLOBAL_CONFIG_PATH exists.
 if [ ! -d "$HOST_GLOBAL_CONFIG_PATH" ]; then
