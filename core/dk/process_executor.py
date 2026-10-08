@@ -119,7 +119,16 @@ class ProcessExecutor:
         # the container, or on the host.
         # @todo Figure out why that's the case and write an explanation here.
         stdin = sys.stdin if pass_stdin else DEVNULL if container else None
-        result = run(command, check=False, stdin=stdin, env=variables)
+        env = {}
+        if 'DOCKER_CONFIG' in os.environ:
+            env['DOCKER_CONFIG'] = os.environ['DOCKER_CONFIG']
+        env.update(variables)
+        result = run(
+            command,
+            check=False,
+            stdin=stdin,
+            env=env,
+        )
         return result.returncode
 
     def execute_pipe(
